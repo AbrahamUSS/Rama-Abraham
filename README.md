@@ -1,27 +1,36 @@
-# 🏫 Sistema de Gestión – IEP Corazón de Jesús
+# Sistema de Gestion -- IEP Corazon de Jesus
 
-Sistema web de administración académica para la Institución Educativa Privada **Corazón de Jesús College**. Prototipo funcional construido con HTML, CSS y JavaScript puro (Vanilla JS), sin dependencias externas ni frameworks.
+Sistema web de administracion academica para la Institucion Educativa Privada **Corazon de Jesus College**. Construido con una arquitectura **MVC (Modelo-Vista-Controlador)** utilizando PHP en el backend y HTML, CSS y JavaScript (Vanilla JS) en el frontend, sin frameworks externos.
 
 ---
 
-## ✨ Características principales
+## Caracteristicas principales
 
-| Módulo | Rol | Descripción |
+| Modulo | Rol | Descripcion |
 |--------|-----|-------------|
-| **Información Personal** | Docente / Admin | Ficha de datos del usuario autenticado |
+| **Informacion Personal** | Docente / Admin | Ficha de datos del usuario autenticado |
 | **Mis Cursos** | Docente | Lista de cursos asignados con detalle de alumnos y calificaciones |
-| **Horarios y Actividades** | Docente | Calendario de eventos académicos y reuniones |
+| **Horarios y Actividades** | Docente | Calendario de eventos academicos y reuniones |
 | **Registro de Asistencia** | Docente | Control de asistencia diaria (Presente / Tardanza / Falta) |
 | **Incidencias** | Docente / Admin | Registro y seguimiento de incidencias disciplinarias |
-| **Reportes** | Docente | Estadísticas y resúmenes de rendimiento estudiantil |
-| **Reporte Docentes** | Admin | Evaluación y calificación del desempeño docente |
-| **Mensajería y UGEL** | Docente / Admin | Comunicación interna y mensajes de la UGEL (Solo admi) |
-| **Plantillas UGEL** | Admin | Descarga de documentos oficiales (currículo, sílabos, sesiones, etc) |
-| **Gestión Económica** | Admin | Dashboard con métricas financieras del colegio |
+| **Reportes** | Docente | Estadisticas y resumenes de rendimiento estudiantil |
+| **Reporte Docentes** | Admin | Evaluacion y calificacion del desempeno docente |
+| **Mensajeria y UGEL** | Docente / Admin | Comunicacion interna y mensajes de la UGEL (solo admin) |
+| **Plantillas UGEL** | Admin | Descarga de documentos oficiales (curriculo, silabos, sesiones, etc.) |
+| **Gestion Economica** | Admin | Dashboard con metricas financieras del colegio |
 
-## 🛡️ Autenticación
+## Arquitectura MVC
 
-El sistema incluye un módulo de autenticación basado en `localStorage` con fallback por parámetro URL (`?u=`), ideal para funcionar tanto en servidor local como abriendo los archivos directamente (`file://`).
+El proyecto sigue el patron **Modelo-Vista-Controlador** para separar responsabilidades:
+
+- **Modelo (models/):** Clases PHP que representan las entidades del sistema y encapsulan la logica de acceso a datos.
+- **Vista (views/):** Archivos HTML que definen la interfaz de usuario para cada seccion del sistema.
+- **Controlador (controllers/):** Clases PHP que reciben las peticiones, coordinan la logica de negocio y seleccionan la vista correspondiente.
+- **Core (core/):** Componentes centrales del sistema, como la clase de conexion a base de datos.
+
+## Autenticacion
+
+El sistema incluye un modulo de autenticacion con soporte en `localStorage` y fallback por parametro URL (`?u=`), permitiendo funcionar tanto en servidor local como abriendo los archivos directamente (`file://`).
 
 **Credenciales de prueba:**
 
@@ -30,55 +39,69 @@ El sistema incluye un módulo de autenticación basado en `localStorage` con fal
 | `docen` | Docente | Portal Docente |
 | `dire` | Director / Administrativo | Portal Administrativo |
 
-## 🗂️ Estructura del proyecto
+## Estructura del proyecto
 
 ```
 Sistema_Gestion_IE/
-├── index.html          # Punto de entrada (redirección por rol)
-├── login.html          # Página de inicio de sesión
-├── admin.html          # Dashboard administrativo (Director)
-├── docente.html        # Dashboard docente
-├── css/
-│   ├── variables.css   # Tokens de diseño (colores, fuentes, espaciado)
-│   ├── common.css      # Estilos base compartidos
-│   ├── login.css       # Estilos de la página de login
-│   ├── dashboard.css   # Layout del dashboard (sidebar + navbar)
-│   └── components.css  # Componentes reutilizables (tablas, cards, modales)
-├── js/
-│   ├── auth.js         # Módulo de autenticación y guardias de ruta
-│   ├── router.js       # SPA hash-router para navegación sin recarga
-│   ├── mockData.js     # Base de datos simulada con LocalStorage
-│   ├── admin.js        # Lógica y vistas del portal administrativo
-│   └── docente.js      # Lógica y vistas del portal docente
-├── docs/
-│   ├── curriculo.pdf   # Plantilla de currículo
-│   └── syllabus.pdf    # Plantilla de sílabo
-└── LICENSE             # AGPL-3.0
+├── controllers/                # Controladores (logica de negocio y enrutamiento)
+├── core/                       # Componentes centrales del sistema
+│   └── database.php            # Clase de conexion a MySQL con PDO
+├── models/                     # Modelos (acceso a datos y entidades)
+├── views/                      # Vistas (interfaz de usuario)
+│   ├── index.html              # Punto de entrada (redireccion por rol)
+│   ├── login.html              # Pagina de inicio de sesion
+│   ├── admin.html              # Dashboard administrativo (Director)
+│   └── docente.html            # Dashboard docente
+├── public/                     # Recursos estaticos publicos
+│   ├── css/
+│   │   ├── variables.css       # Tokens de diseno (colores, fuentes, espaciado)
+│   │   ├── common.css          # Estilos base compartidos
+│   │   ├── login.css           # Estilos de la pagina de login
+│   │   ├── dashboard.css       # Layout del dashboard (sidebar + navbar)
+│   │   └── components.css      # Componentes reutilizables (tablas, cards, modales)
+│   ├── js/
+│   │   ├── auth.js             # Modulo de autenticacion y guardias de ruta
+│   │   ├── router.js           # SPA hash-router para navegacion sin recarga
+│   │   ├── mockData.js         # Base de datos simulada con LocalStorage
+│   │   ├── admin.js            # Logica y vistas del portal administrativo
+│   │   └── docente.js          # Logica y vistas del portal docente
+│   └── docs/
+│       ├── curriculo.pdf       # Plantilla de curriculo
+│       └── syllabus.pdf        # Plantilla de silabo
+├── LICENSE                     # AGPL-3.0
+└── README.md
 ```
 
-## 🚀 Cómo ejecutar
+## Como ejecutar
 
-No requiere instalación ni dependencias. Simplemente abre `index.html` en tu navegador:
+### Requisitos previos
 
-```bash
-# Opción 1: Abrir directamente
-xdg-open index.html        # Linux
-open index.html             # macOS
-start index.html            # Windows
+- Servidor web con soporte PHP (Apache, XAMPP, Laragon, etc.)
+- MySQL o MariaDB
+- Base de datos `colegio_DB` configurada en el servidor
 
-# Opción 2: Servidor local (recomendado)
-python3 -m http.server 8080
-# Luego visita http://localhost:8080
+### Ejecucion
+
+1. Clonar o copiar el proyecto en el directorio raiz de tu servidor web (por ejemplo, `htdocs/` en XAMPP).
+2. Crear la base de datos `colegio_DB` en MySQL.
+3. Acceder desde el navegador a la ruta correspondiente del servidor local:
+
+```
+http://localhost/Sistema_Gestion_IE/views/index.html
 ```
 
-## 🛠️ Tecnologías
+Tambien es posible abrir las vistas directamente en el navegador (`file://`) para pruebas rapidas del frontend, ya que el sistema cuenta con datos simulados mediante `mockData.js` y `localStorage`.
 
-- **HTML5** — Estructura semántica
-- **CSS3** — Variables CSS, Flexbox, Grid, diseño responsivo
-- **JavaScript ES6** — Vanilla JS, sin frameworks ni librerías externas
-- **LocalStorage** — Persistencia de datos simulada en el navegador
-- **SVG** — Iconografía inline sin dependencias de paquetes de iconos
+## Tecnologias
 
-## 📄 Licencia
+- **PHP** -- Backend, conexion a base de datos con PDO, logica del servidor
+- **MySQL** -- Base de datos relacional (colegio_DB)
+- **HTML5** -- Estructura semantica de las vistas
+- **CSS3** -- Variables CSS, Flexbox, Grid, diseno responsivo
+- **JavaScript ES6** -- Vanilla JS, SPA con hash-router, sin frameworks
+- **LocalStorage** -- Persistencia de datos simulada en el navegador (modo prototipo)
+- **SVG** -- Iconografia inline sin dependencias externas
 
-Este proyecto está licenciado bajo la **GNU Affero General Public License v3.0** (AGPL-3.0). Consulta el archivo [LICENSE](LICENSE) para más detalles.
+## Licencia
+
+Este proyecto esta licenciado bajo la **GNU Affero General Public License v3.0** (AGPL-3.0). Consulta el archivo [LICENSE](LICENSE) para mas detalles.
