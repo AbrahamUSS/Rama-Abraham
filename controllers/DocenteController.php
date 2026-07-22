@@ -20,6 +20,19 @@ class DocenteController
         }
 
         if ($method === 'POST') {
+            $action = (string)($payload['action'] ?? '');
+            if ($action === 'rate' || (isset($payload['calificacion']) && !isset($payload['nombre_completo']) && !isset($payload['nombre']))) {
+                $idDocente = (int)($payload['id_docente'] ?? 0);
+                $calificacion = isset($payload['calificacion']) ? (float)$payload['calificacion'] : null;
+                $observaciones = trim((string)($payload['observaciones'] ?? ''));
+
+                if ($idDocente <= 0 || $calificacion === null) {
+                    return ['success' => false, 'message' => 'Seleccione un docente y una calificación válida.', 'data' => null];
+                }
+
+                return ['success' => true, 'message' => 'Calificación registrada correctamente.', 'data' => $this->model->rateDocente($idDocente, $calificacion, $observaciones)];
+            }
+
             try {
                 $record = $this->model->create($payload);
                 return ['success' => true, 'message' => 'Docente registrado correctamente.', 'data' => $record];
@@ -30,6 +43,19 @@ class DocenteController
 
         if ($method === 'PATCH') {
             $idDocente = (int)($payload['id_docente'] ?? 0);
+            $action = (string)($payload['action'] ?? '');
+
+            if ($action === 'rate' || isset($payload['calificacion'])) {
+                $calificacion = isset($payload['calificacion']) ? (float)$payload['calificacion'] : null;
+                $observaciones = trim((string)($payload['observaciones'] ?? ''));
+
+                if ($idDocente <= 0 || $calificacion === null) {
+                    return ['success' => false, 'message' => 'Seleccione un docente y una calificación válida.', 'data' => null];
+                }
+
+                return ['success' => true, 'message' => 'Calificación registrada correctamente.', 'data' => $this->model->rateDocente($idDocente, $calificacion, $observaciones)];
+            }
+
             $estado = isset($payload['es_activo']) ? filter_var($payload['es_activo'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
 
             if ($idDocente <= 0 || $estado === null) {

@@ -189,29 +189,6 @@
      ========================================================================== */
   function renderDocentes(container) {
     setPageTitle('Gestión de Docentes');
-    const db = window.SchoolDB.getData();
-
-    function buildTeacherRows() {
-      let rows = '';
-      db.teachers.forEach(t => {
-        rows += `
-          <tr>
-            <td style="font-weight: 600;">${t.id}</td>
-            <td><strong>${t.name}</strong></td>
-            <td>${t.subjects}</td>
-            <td>${t.email}</td>
-            <td style="text-align: center; font-weight: 700; color: var(--primary-orange);">${t.rating} ★</td>
-            <td><em style="font-size: 12.5px; color: var(--neutral-medium);">${t.comments || 'Sin comentarios.'}</em></td>
-          </tr>
-        `;
-      });
-      return rows;
-    }
-
-    let teacherOptions = '';
-    db.teachers.forEach(t => {
-      teacherOptions += `<option value="${t.id}">${t.name}</option>`;
-    });
 
     container.innerHTML = `
       <div class="dashboard-grid" style="grid-template-columns: 1fr 1.6fr;">
@@ -224,8 +201,7 @@
             <div class="form-group">
               <label class="form-label-desc">Docente</label>
               <select id="rate-teacher-id" class="control-select" required>
-                <option value="" disabled selected>-- Seleccione Docente --</option>
-                ${teacherOptions}
+                <option value="" disabled selected>-- Cargando docentes... --</option>
               </select>
             </div>
             <div class="form-group">
@@ -262,7 +238,7 @@
                 </tr>
               </thead>
               <tbody id="teacher-list-tbody">
-                ${buildTeacherRows()}
+                <tr><td colspan="6">Cargando docentes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -272,30 +248,123 @@
 
     const slider = document.getElementById('rate-val');
     const label = document.getElementById('rate-val-lbl');
-    slider.addEventListener('input', function() {
-      label.textContent = `${parseFloat(this.value).toFixed(1)} ★`;
-    });
-
+    const selectDocente = document.getElementById('rate-teacher-id');
     const form = document.getElementById('rate-teacher-form');
     const tableBody = document.getElementById('teacher-list-tbody');
     const alertBox = document.getElementById('rate-alert');
 
+    slider.addEventListener('input', function() {
+      label.textContent = `${parseFloat(this.value).toFixed(1)} ★`;
+    });
+
+    function loadDocentesReport() {
+      fetch(getDocentesApiUrl(), {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
+        .then(result => {
+          if (!result.success || !Array.isArray(result.data) || result.data.length === 0) {
+            selectDocente.innerHTML = '<option value="" disabled selected>-- No hay docentes registrados --</option>';
+            tableBody.innerHTML = '<tr><td colspan="6">No se encontraron docentes registrados en la base de datos.</td></tr>';
+            return;
+          }
+
+          const currentSelectVal = selectDocente.value;
+          selectDocente.innerHTML = '<option value="" disabled selected>-- Seleccione Docente --</option>';
+
+          let rowsHtml = '';
+          result.data.forEach(t => {
+            selectDocente.innerHTML += `<option value="${t.id_docente}">${t.nombre_completo} (${t.cod_docente})</option>`;
+
+            const ratingVal = t.calificacion ? parseFloat(t.calificacion).toFixed(1) : '5.0';
+            const cursos = t.cursos_a_cargo || 'Sin asignación';
+            const correo = t.email || t.direccion || '-';
+            const obs = t.observaciones || 'Sin comentarios.';
+
+            rowsHtml += `
+              <tr>
+                <td style="font-weight: 600;">${t.cod_docente}</td>
+                <td><strong>${t.nombre_completo}</strong></td>
+                <td>${cursos}</td>
+                <td>${correo}</td>
+                <td style="text-align: center; font-weight: 700; color: var(--primary-orange);">${ratingVal} ★</td>
+                <td><em style="font-size: 12.5px; color: var(--neutral-medium);">${obs}</em></td>
+              </tr>
+            `;
+          });
+
+          if (currentSelectVal) {
+            selectDocente.value = currentSelectVal;
+          }
+
+          tableBody.innerHTML = rowsHtml;
+        })
+        .catch(err => {
+          console.error('Error cargando reporte de docentes:', err);
+          selectDocente.innerHTML = '<option value="" disabled selected>-- Error al cargar --</option>';
+          tableBody.innerHTML = '<tr><td colspan="6">Error de conexión al cargar los docentes.</td></tr>';
+        });
+    }
+
     form.addEventListener('submit', function(e) {
       e.preventDefault();
-      const teacherId = document.getElementById('rate-teacher-id').value;
+      const teacherId = selectDocente.value;
       const rate = slider.value;
-      const comment = document.getElementById('rate-comment').value;
+      const comment = document.getElementById('rate-comment').value.trim();
 
-      window.SchoolDB.rateTeacher(teacherId, rate, comment);
-      
-      // Update list
-      tableBody.innerHTML = buildTeacherRows();
-      
-      form.reset();
-      label.textContent = '5.0 ★';
-      alertBox.style.display = 'block';
-      setTimeout(() => { alertBox.style.display = 'none'; }, 3000);
+      if (!teacherId) {
+        alertBox.textContent = 'Seleccione un docente.';
+        alertBox.className = 'badge badge-warning';
+        alertBox.style.display = 'block';
+        return;
+      }
+
+      fetch(getDocentesApiUrl(), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'rate',
+          id_docente: teacherId,
+          calificacion: rate,
+          observaciones: comment
+        }),
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(resData => {
+          if (!resData || !resData.success) {
+            alertBox.textContent = resData?.message || 'No fue posible guardar la calificación.';
+            alertBox.className = 'badge badge-warning';
+            alertBox.style.display = 'block';
+            return;
+          }
+
+          form.reset();
+          label.textContent = '5.0 ★';
+          alertBox.textContent = '✓ Calificación registrada en base de datos.';
+          alertBox.className = 'badge badge-success';
+          alertBox.style.display = 'block';
+          loadDocentesReport();
+          setTimeout(() => { alertBox.style.display = 'none'; }, 3000);
+        })
+        .catch(error => {
+          console.error('Error al guardar calificación:', error);
+          alertBox.textContent = 'Error de conexión al registrar la calificación.';
+          alertBox.className = 'badge badge-warning';
+          alertBox.style.display = 'block';
+        });
     });
+
+    loadDocentesReport();
   }
 
   /* ==========================================================================
@@ -309,37 +378,66 @@
         <div class="card-header">
           <h3 class="card-title">Registrar Nuevo Docente</h3>
         </div>
-        <form id="add-docente-form" class="form-layout" style="display: flex; flex-direction: column; gap: 16px;">
-          <div class="form-group">
-            <label class="form-label-desc">Nombre completo</label>
-            <input type="text" id="docente-nombre" class="control-input" placeholder="Ej. Prof. María Pérez López" required>
+        <form id="add-docente-form" class="form-layout" style="display: flex; flex-direction: column; gap: 20px;">
+          
+          <h4 style="margin-bottom: 4px; font-size: 1.05rem; color: var(--primary-color, #2563eb); border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">1. Datos de Persona Natural</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+            <div class="form-group">
+              <label class="form-label-desc">DNI / Documento</label>
+              <input type="text" id="docente-dni" class="control-input" placeholder="Ej. 74859612" maxlength="15" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label-desc">Nombres</label>
+              <input type="text" id="docente-nombre" class="control-input" placeholder="Ej. María Elena" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label-desc">Apellido Paterno</label>
+              <input type="text" id="docente-ap-paterno" class="control-input" placeholder="Ej. Pérez" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label-desc">Apellido Materno</label>
+              <input type="text" id="docente-ap-materno" class="control-input" placeholder="Ej. López" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label-desc">Fecha de Nacimiento</label>
+              <input type="date" id="docente-fechana" class="control-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label-desc">Correo Electrónico (Dirección)</label>
+              <input type="email" id="docente-direccion" class="control-input" placeholder="Ej. maria.perez@colegio.edu.pe" required>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label-desc">Tipo de contrato</label>
-            <select id="docente-contrato" class="control-select" required>
-              <option value="">-- Seleccione --</option>
-              <option value="Nombrado">Nombrado</option>
-              <option value="Contratado">Contratado</option>
-              <option value="Temporal">Temporal</option>
-            </select>
+
+          <h4 style="margin-top: 8px; margin-bottom: 4px; font-size: 1.05rem; color: var(--primary-color, #2563eb); border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">2. Datos del Docente</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+            <div class="form-group">
+              <label class="form-label-desc">Tipo de contrato</label>
+              <select id="docente-contrato" class="control-select" required>
+                <option value="">-- Seleccione --</option>
+                <option value="Nombrado">Nombrado</option>
+                <option value="Contratado">Contratado</option>
+                <option value="Temporal">Temporal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label-desc">Grado académico</label>
+              <input type="text" id="docente-grado" class="control-input" placeholder="Ej. Magíster en Educación" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label-desc">Especialidad</label>
+              <input type="text" id="docente-especialidad" class="control-input" placeholder="Ej. Matemática" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label-desc">Estado</label>
+              <select id="docente-estado" class="control-select">
+                <option value="true">Activo</option>
+                <option value="false">Inactivo</option>
+              </select>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label-desc">Grado académico</label>
-            <input type="text" id="docente-grado" class="control-input" placeholder="Ej. Magíster en Educación" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label-desc">Especialidad</label>
-            <input type="text" id="docente-especialidad" class="control-input" placeholder="Ej. Matemática" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label-desc">Estado</label>
-            <select id="docente-estado" class="control-select">
-              <option value="true">Activo</option>
-              <option value="false">Inactivo</option>
-            </select>
-          </div>
+
           <div id="docente-alert" class="badge badge-success" style="display:none; width:100%; text-align:center;">✓ Docente registrado correctamente.</div>
-          <button type="submit" class="btn btn-primary" style="width:100%;">Guardar Docente</button>
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 8px;">Guardar Docente</button>
         </form>
       </div>
 
@@ -352,7 +450,9 @@
             <thead>
               <tr>
                 <th>Código</th>
-                <th>Nombre</th>
+                <th>DNI</th>
+                <th>Nombre Completo</th>
+                <th>Correo Electrónico</th>
                 <th>Contrato</th>
                 <th>Grado</th>
                 <th>Especialidad</th>
@@ -394,7 +494,7 @@
         })
         .then(result => {
           if (!result.success) {
-            tbody.innerHTML = `<tr><td colspan="6">${result.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8">${result.message}</td></tr>`;
             return;
           }
 
@@ -403,7 +503,9 @@
             tbody.innerHTML += `
               <tr>
                 <td style="font-weight: 600;">${teacher.cod_docente}</td>
+                <td>${teacher.dni || '-'}</td>
                 <td>${teacher.nombre_completo}</td>
+                <td>${teacher.email || teacher.direccion || '-'}</td>
                 <td>${teacher.tipo_contrato}</td>
                 <td>${teacher.grado_academico}</td>
                 <td>${teacher.especialidad}</td>
@@ -417,7 +519,7 @@
           });
         })
         .catch(() => {
-          tbody.innerHTML = `<tr><td colspan="6">No fue posible cargar los docentes.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="8">No fue posible cargar los docentes.</td></tr>`;
         });
     }
 
@@ -445,7 +547,12 @@
     form.addEventListener('submit', function(e) {
       e.preventDefault();
       const payload = {
-        nombre_completo: document.getElementById('docente-nombre').value.trim(),
+        dni: document.getElementById('docente-dni').value.trim(),
+        nombre: document.getElementById('docente-nombre').value.trim(),
+        ap_paterno: document.getElementById('docente-ap-paterno').value.trim(),
+        ap_materno: document.getElementById('docente-ap-materno').value.trim(),
+        fechaNa: document.getElementById('docente-fechana').value,
+        direccion: document.getElementById('docente-direccion').value.trim(),
         tipo_contrato: document.getElementById('docente-contrato').value,
         grado_academico: document.getElementById('docente-grado').value.trim(),
         especialidad: document.getElementById('docente-especialidad').value.trim(),
@@ -511,7 +618,312 @@
   }
 
   /* ==========================================================================
-     5. MENSAJERÍA / NOTIFICACIONES (UGEL & DOCENTES TABS)
+     5. GESTIÓN DE CURSOS: CREAR CURSO Y ASIGNAR DOCENTE
+     ========================================================================== */
+  function renderCursos(container) {
+    setPageTitle('Gestión de Cursos');
+
+    container.innerHTML = `
+      <div class="card card-accent" style="max-width: 1180px; margin: 0 auto;">
+        <div class="card-header">
+          <h3 class="card-title">Gestión de cursos y asignaciones</h3>
+        </div>
+
+        <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+          <div class="card" style="border: 1px solid var(--neutral-light);">
+            <div class="card-header">
+              <h3 class="card-title">Crear curso</h3>
+            </div>
+            <form id="curso-form" class="form-layout" style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group">
+                <label class="form-label-desc">Nombre del curso</label>
+                <input type="text" id="curso-nombre" class="control-input" placeholder="Ej. Matemática" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label-desc">Descripción</label>
+                <textarea id="curso-descripcion" class="control-textarea" placeholder="Descripción breve del curso" required></textarea>
+              </div>
+              <div class="dashboard-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+                <div class="form-group">
+                  <label class="form-label-desc">Grado</label>
+                  <select id="curso-grado" class="control-select"></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label-desc">Año</label>
+                  <input type="number" id="curso-anio" class="control-input" min="2020" max="2100" value="${new Date().getFullYear()}">
+                </div>
+              </div>
+              <div id="curso-alert" class="badge badge-success" style="display:none; width:100%; text-align:center;">✓ Curso registrado correctamente.</div>
+              <button type="submit" class="btn btn-primary" style="width:100%;">Guardar curso</button>
+            </form>
+          </div>
+
+          <div class="card" style="border: 1px solid var(--neutral-light);">
+            <div class="card-header">
+              <h3 class="card-title">Asignar curso existente</h3>
+            </div>
+            <form id="asignacion-form" class="form-layout" style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group">
+                <label class="form-label-desc">Curso existente</label>
+                <select id="asignacion-curso" class="control-select" required></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label-desc">Docente</label>
+                <select id="asignacion-docente" class="control-select" required></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label-desc">Día / horario</label>
+                <input type="text" id="asignacion-dia" class="control-input" placeholder="Lunes - Miércoles" required>
+              </div>
+              <div class="dashboard-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+                <div class="form-group">
+                  <label class="form-label-desc">Hora inicio</label>
+                  <input type="time" id="asignacion-hora-inicio" class="control-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label-desc">Hora fin</label>
+                  <input type="time" id="asignacion-hora-fin" class="control-input" required>
+                </div>
+              </div>
+              <div class="dashboard-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+                <div class="form-group">
+                  <label class="form-label-desc">Fecha de asignación</label>
+                  <input type="date" id="asignacion-fecha" class="control-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label-desc">Fecha de fin</label>
+                  <input type="date" id="asignacion-fecha-fin" class="control-input">
+                </div>
+              </div>
+              <div id="asignacion-alert" class="badge badge-success" style="display:none; width:100%; text-align:center;">✓ Asignación registrada correctamente.</div>
+              <button type="submit" class="btn btn-secondary" style="width:100%;">Guardar asignación</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <h3 class="card-title">Cursos y docentes asignados</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="school-table">
+            <thead>
+              <tr>
+                <th>Curso</th>
+                <th>Grado</th>
+                <th>Docente</th>
+                <th>Día / horario</th>
+                <th>Fecha inicio</th>
+                <th>Fecha fin</th>
+              </tr>
+            </thead>
+            <tbody id="cursos-registrados-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    const cursoForm = document.getElementById('curso-form');
+    const asignacionForm = document.getElementById('asignacion-form');
+    const cursoAlert = document.getElementById('curso-alert');
+    const asignacionAlert = document.getElementById('asignacion-alert');
+    const tbody = document.getElementById('cursos-registrados-tbody');
+    const gradoSelect = document.getElementById('curso-grado');
+    const cursoSelect = document.getElementById('asignacion-curso');
+    const docenteSelect = document.getElementById('asignacion-docente');
+    const fechaInput = document.getElementById('asignacion-fecha');
+    const fechaFinInput = document.getElementById('asignacion-fecha-fin');
+
+    if (fechaInput) {
+      fechaInput.value = new Date().toISOString().slice(0, 10);
+    }
+
+    function renderReferenceOptions(data) {
+      gradoSelect.innerHTML = '<option value="0">Crear grado predeterminado</option>';
+      data.grades.forEach(grado => {
+        const label = `${grado.nombre} ${grado.seccion} · ${grado.turno || 'Sin turno'}`;
+        gradoSelect.innerHTML += `<option value="${grado.id_grado}">${label}</option>`;
+      });
+
+      cursoSelect.innerHTML = '<option value="">-- Seleccione un curso --</option>';
+      data.courses.forEach(curso => {
+        cursoSelect.innerHTML += `<option value="${curso.id_curso}">${curso.nombre}</option>`;
+      });
+
+      docenteSelect.innerHTML = '<option value="">-- Seleccione un docente --</option>';
+      data.teachers.forEach(docente => {
+        docenteSelect.innerHTML += `<option value="${docente.id_docente}">${docente.nombre_completo} (${docente.cod_docente})</option>`;
+      });
+    }
+
+    function renderAssignments(data) {
+      tbody.innerHTML = '';
+      if (!data.assignments || data.assignments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6">No hay asignaciones registradas aún.</td></tr>';
+        return;
+      }
+
+      data.assignments.forEach(item => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${item.nombre_curso}</td>
+            <td>${item.nombre_grado} ${item.seccion}</td>
+            <td>${item.nombre_completo} (${item.cod_docente})</td>
+            <td>${item.dia_horario} · ${item.hora_inicio.slice(0, 5)} - ${item.hora_fin.slice(0, 5)}</td>
+            <td>${item.fecha_asignacion}</td>
+            <td>${item.fecha_finAsig || '—'}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function loadData() {
+      fetch('../public/api/cursos.php', {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(response => response.json())
+        .then(result => {
+          if (!result.success) {
+            throw new Error(result.message || 'No se pudieron cargar los datos');
+          }
+          renderReferenceOptions(result.data);
+          renderAssignments(result.data);
+        })
+        .catch(() => {
+          gradoSelect.innerHTML = '<option value="">No hay grados disponibles</option>';
+          cursoSelect.innerHTML = '<option value="">No hay cursos disponibles</option>';
+          docenteSelect.innerHTML = '<option value="">No hay docentes disponibles</option>';
+          tbody.innerHTML = '<tr><td colspan="6">No fue posible cargar la información.</td></tr>';
+        });
+    }
+
+    cursoForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const payload = {
+        action: 'create-course',
+        nombre: document.getElementById('curso-nombre').value.trim(),
+        descripcion: document.getElementById('curso-descripcion').value.trim(),
+        id_grado: document.getElementById('curso-grado').value,
+        año: document.getElementById('curso-anio').value
+      };
+
+      fetch('../public/api/cursos.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new URLSearchParams(payload).toString(),
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(async response => {
+          const rawText = await response.text();
+          let result = null;
+          try {
+            result = rawText ? JSON.parse(rawText) : null;
+          } catch (parseError) {
+            throw new Error(rawText || `HTTP ${response.status}`);
+          }
+
+          if (!response.ok) {
+            throw new Error(result?.message || `HTTP ${response.status}`);
+          }
+          return result;
+        })
+        .then(result => {
+          if (!result || !result.success) {
+            cursoAlert.textContent = result?.message || 'No fue posible guardar el curso.';
+            cursoAlert.className = 'badge badge-warning';
+            cursoAlert.style.display = 'block';
+            return;
+          }
+
+          cursoForm.reset();
+          cursoAlert.textContent = '✓ Curso registrado correctamente.';
+          cursoAlert.className = 'badge badge-success';
+          cursoAlert.style.display = 'block';
+          loadData();
+          setTimeout(() => { cursoAlert.style.display = 'none'; }, 3000);
+        })
+        .catch(error => {
+          cursoAlert.textContent = error?.message || 'No fue posible guardar el curso.';
+          cursoAlert.className = 'badge badge-warning';
+          cursoAlert.style.display = 'block';
+        });
+    });
+
+    asignacionForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const payload = {
+        action: 'assign-course',
+        id_curso: document.getElementById('asignacion-curso').value,
+        id_docente: document.getElementById('asignacion-docente').value,
+        dia_horario: document.getElementById('asignacion-dia').value.trim(),
+        hora_inicio: document.getElementById('asignacion-hora-inicio').value,
+        hora_fin: document.getElementById('asignacion-hora-fin').value,
+        fecha_asignacion: document.getElementById('asignacion-fecha').value,
+        fecha_finAsig: document.getElementById('asignacion-fecha-fin').value
+      };
+
+      fetch('../public/api/cursos.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new URLSearchParams(payload).toString(),
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(async response => {
+          const rawText = await response.text();
+          let result = null;
+          try {
+            result = rawText ? JSON.parse(rawText) : null;
+          } catch (parseError) {
+            throw new Error(rawText || `HTTP ${response.status}`);
+          }
+
+          if (!response.ok) {
+            throw new Error(result?.message || `HTTP ${response.status}`);
+          }
+          return result;
+        })
+        .then(result => {
+          if (!result || !result.success) {
+            asignacionAlert.textContent = result?.message || 'No fue posible guardar la asignación.';
+            asignacionAlert.className = 'badge badge-warning';
+            asignacionAlert.style.display = 'block';
+            return;
+          }
+
+          asignacionForm.reset();
+          if (fechaInput) fechaInput.value = new Date().toISOString().slice(0, 10);
+          if (fechaFinInput) fechaFinInput.value = '';
+          asignacionAlert.textContent = '✓ Asignación registrada correctamente.';
+          asignacionAlert.className = 'badge badge-success';
+          asignacionAlert.style.display = 'block';
+          loadData();
+          setTimeout(() => { asignacionAlert.style.display = 'none'; }, 3000);
+        })
+        .catch(error => {
+          asignacionAlert.textContent = error?.message || 'No fue posible guardar la asignación.';
+          asignacionAlert.className = 'badge badge-warning';
+          asignacionAlert.style.display = 'block';
+        });
+    });
+
+    loadData();
+  }
+
+  /* ==========================================================================
+     6. MENSAJERÍA / NOTIFICACIONES (UGEL & DOCENTES TABS)
      ========================================================================== */
   function renderMensajeria(container) {
     setPageTitle('Mensajería y Comunicados');
@@ -1047,6 +1459,7 @@
     renderIncidencias: renderIncidencias,
     renderDocentes: renderDocentes,
     renderAddDocentes: renderAddDocentes,
+    renderCursos: renderCursos,
     renderMensajeria: renderMensajeria,
     renderPlantillas: renderPlantillas,
     renderEconomia: renderEconomia
