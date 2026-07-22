@@ -1202,150 +1202,125 @@
   /* ==========================================================================
      6. GESTIÓN ECONÓMICA: DASHBOARD VISUAL REACTIVO CON AJUSTES
      ========================================================================== */
+  function getEconomiaApiUrl() {
+    try {
+      return new URL('../public/api/economia.php', window.location.href).toString();
+    } catch (error) {
+      return '../public/api/economia.php';
+    }
+  }
+
+  /* ==========================================================================
+     8. GESTIÓN ECONÓMICA Y SIMULADOR FINANCIERO
+     ========================================================================== */
   function renderEconomia(container) {
     setPageTitle('Gestión Económica Escolar');
 
-    function calculateEconomicsAndDraw() {
-      const db = window.SchoolDB.getData();
-      const m = db.economics.metrics;
-
-      // Calculations
-      const totalRevenues = m.recaudacion;
-      const payroll = m.pagoDocentes;
-      const maintenance = m.gastosEpoca;
-      
-      const utilityExpenses = m.internet + m.agua + m.luz;
-      const taxes = m.impuestos;
-      const totalExpenses = payroll + maintenance + utilityExpenses + taxes;
-
-      // Net Income
-      const netBalance = totalRevenues - totalExpenses;
-      
-      // Calculate morosidad in currency terms
-      const unpaidAmount = Math.round(totalRevenues * (m.morosidadPadres / 100));
-
-      // Draw values in UI
-      document.getElementById('val-recaudacion').textContent = `S/ ${totalRevenues.toLocaleString()}`;
-      document.getElementById('val-egresos').textContent = `S/ ${totalExpenses.toLocaleString()}`;
-      
-      const balanceEl = document.getElementById('val-balance');
-      balanceEl.textContent = `S/ ${netBalance.toLocaleString()}`;
-      if (netBalance < 0) {
-        balanceEl.style.color = 'var(--danger)';
-      } else {
-        balanceEl.style.color = 'var(--success)';
-      }
-
-      document.getElementById('val-morosidad').textContent = `S/ ${unpaidAmount.toLocaleString()} (${m.morosidadPadres}%)`;
-
-      // Update manual sliders display text labels
-      document.getElementById('slide-pago-lbl').textContent = `S/ ${m.pagoDocentes.toLocaleString()}`;
-      document.getElementById('slide-moro-lbl').textContent = `${m.morosidadPadres}%`;
-      document.getElementById('slide-gastos-lbl').textContent = `S/ ${m.gastosEpoca.toLocaleString()}`;
-      
-      document.getElementById('slide-recaud-lbl').textContent = `S/ ${m.recaudacion.toLocaleString()}`;
-      document.getElementById('slide-internet-lbl').textContent = `S/ ${m.internet}`;
-      document.getElementById('slide-agua-lbl').textContent = `S/ ${m.agua}`;
-      document.getElementById('slide-luz-lbl').textContent = `S/ ${m.luz}`;
-      document.getElementById('slide-impuestos-lbl').textContent = `S/ ${m.impuestos}`;
-
-      // Animate Chart heights
-      // Max height value for scaling
-      const maxVal = Math.max(totalRevenues, totalExpenses, Math.abs(netBalance), 30000);
-      
-      const fillRec = document.getElementById('bar-fill-recaudacion');
-      const fillEgr = document.getElementById('bar-fill-egresos');
-      const fillBal = document.getElementById('bar-fill-balance');
-
-      fillRec.style.height = `${(totalRevenues / maxVal) * 100}%`;
-      fillRec.querySelector('.chart-bar-tooltip').textContent = `S/ ${totalRevenues.toLocaleString()}`;
-
-      fillEgr.style.height = `${(totalExpenses / maxVal) * 100}%`;
-      fillEgr.querySelector('.chart-bar-tooltip').textContent = `S/ ${totalExpenses.toLocaleString()}`;
-
-      const absBalance = Math.abs(netBalance);
-      fillBal.style.height = `${(absBalance / maxVal) * 100}%`;
-      fillBal.querySelector('.chart-bar-tooltip').textContent = `S/ ${netBalance.toLocaleString()}`;
-      fillBal.style.backgroundColor = netBalance >= 0 ? 'var(--success)' : 'var(--danger)';
-    }
-
-    const db = window.SchoolDB.getData();
-    const m = db.economics.metrics;
-
     container.innerHTML = `
-      <!-- Metrics overview -->
-      <div class="financial-metrics">
+      <!-- Financial Health Header Badge -->
+      <div id="eco-health-banner" style="margin-bottom: 20px; padding: 14px 20px; border-radius: 10px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
+        <span>Cargando análisis económico...</span>
+        <button id="btn-save-economics" class="btn btn-primary" style="padding: 6px 14px; font-size: 13px;">💾 Guardar Parámetros en BD</button>
+      </div>
+
+      <!-- Financial Metrics Grid (8 KPI cards) -->
+      <div class="financial-metrics" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px;">
         <div class="metric-card">
-          <div class="metric-icon-box" style="background-color: var(--success-bg); color: var(--success);">
-            S/
-          </div>
+          <div class="metric-icon-box" style="background-color: var(--success-bg); color: var(--success);">S/</div>
           <div class="metric-details">
             <span class="metric-lbl">Recaudación Teórica</span>
-            <span class="metric-val" id="val-recaudacion">S/ 0</span>
+            <span class="metric-val" id="val-recaudacion-teorica">S/ 0</span>
           </div>
         </div>
 
         <div class="metric-card">
-          <div class="metric-icon-box" style="background-color: var(--danger-bg); color: var(--danger);">
-            -
-          </div>
+          <div class="metric-icon-box" style="background-color: #dcfce7; color: #15803d;">S/</div>
           <div class="metric-details">
-            <span class="metric-lbl">Total Egresos</span>
-            <span class="metric-val" id="val-egresos">S/ 0</span>
+            <span class="metric-lbl">Recaudación Efectiva (Real)</span>
+            <span class="metric-val" id="val-recaudacion-efectiva">S/ 0</span>
           </div>
         </div>
 
         <div class="metric-card">
-          <div class="metric-icon-box" style="background-color: rgba(217, 98, 54, 0.12); color: var(--primary-orange);">
-            =
-          </div>
+          <div class="metric-icon-box" style="background-color: var(--warning-bg); color: var(--warning);">%</div>
           <div class="metric-details">
-            <span class="metric-lbl">Balance Neto Mensual</span>
+            <span class="metric-lbl">Pérdida por Morosidad</span>
+            <span class="metric-val" id="val-morosidad-monto">S/ 0</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-box" style="background-color: #ede9fe; color: #6d28d9;">👥</div>
+          <div class="metric-details">
+            <span class="metric-lbl">Planilla Docente (Nómina)</span>
+            <span class="metric-val" id="val-planilla-docente">S/ 0</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-box" style="background-color: var(--danger-bg); color: var(--danger);">-</div>
+          <div class="metric-details">
+            <span class="metric-lbl">Gastos Operativos (OPEX)</span>
+            <span class="metric-val" id="val-gastos-opex">S/ 0</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-box" style="background-color: #fef3c7; color: #b45309;">🛡️</div>
+          <div class="metric-details">
+            <span class="metric-lbl">Fondo de Reserva</span>
+            <span class="metric-val" id="val-fondo-reserva">S/ 0</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-box" style="background-color: rgba(217, 98, 54, 0.12); color: var(--primary-orange);">=</div>
+          <div class="metric-details">
+            <span class="metric-lbl">Balance / Resultado Neto</span>
             <span class="metric-val" id="val-balance">S/ 0</span>
           </div>
         </div>
 
         <div class="metric-card">
-          <div class="metric-icon-box" style="background-color: var(--warning-bg); color: var(--warning);">
-            %
-          </div>
+          <div class="metric-icon-box" style="background-color: #e0e7ff; color: #4338ca;">⚖️</div>
           <div class="metric-details">
-            <span class="metric-lbl">Morosidad Estimada</span>
-            <span class="metric-val" id="val-morosidad">S/ 0</span>
+            <span class="metric-lbl">Punto de Equilibrio</span>
+            <span class="metric-val" id="val-break-even">0 alumnos</span>
           </div>
         </div>
       </div>
 
       <!-- Financial Chart visual -->
-      <div class="charts-container" style="grid-template-columns: 1fr;">
+      <div class="charts-container" style="grid-template-columns: 1fr; margin-bottom: 24px;">
         <div class="chart-card">
-          <div class="card-header">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h3 class="card-title">Balance Financiero Comparativo</h3>
+            <span id="chart-margen-badge" style="font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 6px; background: #f3f4f6;">Margen: 0%</span>
           </div>
-          <div class="chart-body" style="height: 250px;">
-            <div class="chart-axis-lines">
-              <div class="chart-grid-line"><span>30K</span></div>
-              <div class="chart-grid-line"><span>20K</span></div>
-              <div class="chart-grid-line"><span>10K</span></div>
-              <div class="chart-grid-line"><span>0</span></div>
-            </div>
-            
-            <div class="chart-bar-col" style="width: 120px;">
-              <div class="chart-bar-fill" id="bar-fill-recaudacion" style="background-color: var(--success); height: 0%;">
+          <div class="chart-body" style="height: 260px; display: flex; align-items: flex-end; justify-content: space-around; padding-top: 30px;">
+            <div class="chart-bar-col" style="width: 130px;">
+              <div class="chart-bar-fill" id="bar-fill-teorica" style="background-color: #818cf8; height: 0%;">
                 <div class="chart-bar-tooltip">S/ 0</div>
               </div>
-              <span class="chart-bar-label">Recaudación Total</span>
+              <span class="chart-bar-label">Ingreso Bruto</span>
             </div>
 
-            <div class="chart-bar-col" style="width: 120px;">
-              <div class="chart-bar-fill" id="bar-fill-egresos" style="background-color: var(--danger); height: 0%;">
+            <div class="chart-bar-col" style="width: 130px;">
+              <div class="chart-bar-fill" id="bar-fill-efectiva" style="background-color: #10b981; height: 0%;">
                 <div class="chart-bar-tooltip">S/ 0</div>
               </div>
-              <span class="chart-bar-label">Gastos Totales</span>
+              <span class="chart-bar-label">Ingreso Real</span>
             </div>
 
-            <div class="chart-bar-col" style="width: 120px;">
-              <div class="chart-bar-fill" id="bar-fill-balance" style="background-color: var(--primary-orange); height: 0%;">
+            <div class="chart-bar-col" style="width: 130px;">
+              <div class="chart-bar-fill" id="bar-fill-egresos" style="background-color: #ef4444; height: 0%;">
+                <div class="chart-bar-tooltip">S/ 0</div>
+              </div>
+              <span class="chart-bar-label">Egresos Totales</span>
+            </div>
+
+            <div class="chart-bar-col" style="width: 130px;">
+              <div class="chart-bar-fill" id="bar-fill-balance" style="background-color: #f59e0b; height: 0%;">
                 <div class="chart-bar-tooltip">S/ 0</div>
               </div>
               <span class="chart-bar-label">Resultado Neto</span>
@@ -1354,103 +1329,335 @@
         </div>
       </div>
 
+      <!-- Financial Breakdown Progress Bar -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <h3 class="card-title">Distribución del Presupuesto de Egresos</h3>
+        </div>
+        <div style="padding: 12px 0;">
+          <div style="display: flex; height: 24px; border-radius: 6px; overflow: hidden; background: #e2e8f0; font-size: 11px; font-weight: 700; color: #fff;">
+            <div id="breakdown-bar-nomina" style="background: #8b5cf6; width: 50%; display: flex; align-items: center; justify-content: center;" title="Nómina Docente">Nómina</div>
+            <div id="breakdown-bar-opex" style="background: #f97316; width: 35%; display: flex; align-items: center; justify-content: center;" title="Gastos Operativos">OPEX</div>
+            <div id="breakdown-bar-reserva" style="background: #eab308; width: 15%; display: flex; align-items: center; justify-content: center;" title="Fondo Reserva">Reserva</div>
+          </div>
+          <div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 12px; color: var(--neutral-dark);">
+            <span><strong style="color: #8b5cf6;">■</strong> Nómina: <span id="txt-pct-nomina">0%</span></span>
+            <span><strong style="color: #f97316;">■</strong> OPEX: <span id="txt-pct-opex">0%</span></span>
+            <span><strong style="color: #eab308;">■</strong> Reserva: <span id="txt-pct-reserva">0%</span></span>
+          </div>
+        </div>
+      </div>
+
       <!-- Adjustments manual panel -->
       <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">Ajustes Manuales de Parámetros Económicos</h3>
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 class="card-title">Simulador Financiero y Ajustes Manuales</h3>
+          <span style="font-size: 12px; color: var(--neutral-medium);">Ajuste los controles para simular escenarios en tiempo real</span>
         </div>
-        <div class="adjustments-grid">
-          <!-- 1 -->
+
+        <div id="eco-alert" class="badge badge-success" style="display:none; width:100%; text-align:center; margin-bottom:16px;">✓ Parámetros actualizados.</div>
+
+        <div class="adjustments-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+          <!-- 1. Pensión Promedio -->
           <div class="adjustment-control">
-            <div class="adjustment-title-row">
-              <span>Recaudación Escolar</span>
-              <span class="adjustment-val" id="slide-recaud-lbl">S/ 0</span>
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>Pensión Mensual por Alumno</span>
+              <span class="adjustment-val" id="slide-pension-lbl" style="color: var(--primary-color);">S/ 350</span>
             </div>
-            <input type="range" class="range-slider economy-slide" id="slide-recaud" min="15000" max="45000" step="500" value="${m.recaudacion}">
+            <input type="range" class="range-slider economy-slide" id="slide-pension" min="100" max="1200" step="25" value="350">
           </div>
-          <!-- 2 -->
+
+          <!-- 2. N° Alumnos -->
           <div class="adjustment-control">
-            <div class="adjustment-title-row">
-              <span>Monto Pago Docentes</span>
-              <span class="adjustment-val" id="slide-pago-lbl">S/ 0</span>
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>N° Alumnos Matriculados</span>
+              <span class="adjustment-val" id="slide-alumnos-lbl" style="color: var(--primary-color);">120</span>
             </div>
-            <input type="range" class="range-slider economy-slide" id="slide-pago" min="5000" max="20000" step="500" value="${m.pagoDocentes}">
+            <input type="range" class="range-slider economy-slide" id="slide-alumnos" min="20" max="500" step="5" value="120">
           </div>
-          <!-- 3 -->
+
+          <!-- 3. Morosidad % -->
           <div class="adjustment-control">
-            <div class="adjustment-title-row">
-              <span>Porcentaje Morosidad</span>
-              <span class="adjustment-val" id="slide-moro-lbl">0%</span>
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>Porcentaje de Morosidad</span>
+              <span class="adjustment-val" id="slide-moro-lbl" style="color: var(--warning);">15%</span>
             </div>
-            <input type="range" class="range-slider economy-slide" id="slide-moro" min="0" max="50" step="1" value="${m.morosidadPadres}">
+            <input type="range" class="range-slider economy-slide" id="slide-moro" min="0" max="50" step="1" value="15">
           </div>
-          <!-- 4 -->
+
+          <!-- 4. Sueldo Docente Promedio -->
           <div class="adjustment-control">
-            <div class="adjustment-title-row">
-              <span>Gastos Mantenimiento</span>
-              <span class="adjustment-val" id="slide-gastos-lbl">S/ 0</span>
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>Sueldo Promedio Docente</span>
+              <span class="adjustment-val" id="slide-sueldo-docente-lbl" style="color: #6d28d9;">S/ 1,800</span>
             </div>
-            <input type="range" class="range-slider economy-slide" id="slide-gastos" min="500" max="8000" step="100" value="${m.gastosEpoca}">
+            <input type="range" class="range-slider economy-slide" id="slide-sueldo-docente" min="800" max="4500" step="50" value="1800">
           </div>
-          <!-- 5 (Internet) -->
+
+          <!-- 5. Mantenimiento -->
           <div class="adjustment-control">
-            <div class="adjustment-title-row">
-              <span>Gasto Internet</span>
-              <span class="adjustment-val" id="slide-internet-lbl">S/ 0</span>
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>Gastos Mantenimiento Escolar</span>
+              <span class="adjustment-val" id="slide-gastos-lbl">S/ 2,500</span>
             </div>
-            <input type="range" class="range-slider economy-slide" id="slide-internet" min="100" max="1000" step="20" value="${m.internet}">
+            <input type="range" class="range-slider economy-slide" id="slide-gastos" min="200" max="8000" step="100" value="2500">
           </div>
-          <!-- 6 (Agua) -->
+
+          <!-- 6. Internet -->
           <div class="adjustment-control">
-            <div class="adjustment-title-row">
-              <span>Gasto Agua</span>
-              <span class="adjustment-val" id="slide-agua-lbl">S/ 0</span>
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>Servicio de Internet y Telef.</span>
+              <span class="adjustment-val" id="slide-internet-lbl">S/ 320</span>
             </div>
-            <input type="range" class="range-slider economy-slide" id="slide-agua" min="50" max="1000" step="10" value="${m.agua}">
+            <input type="range" class="range-slider economy-slide" id="slide-internet" min="50" max="1000" step="10" value="320">
           </div>
-          <!-- 7 (Luz) -->
+
+          <!-- 7. Agua -->
           <div class="adjustment-control">
-            <div class="adjustment-title-row">
-              <span>Gasto Luz</span>
-              <span class="adjustment-val" id="slide-luz-lbl">S/ 0</span>
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>Servicio de Agua Potable</span>
+              <span class="adjustment-val" id="slide-agua-lbl">S/ 250</span>
             </div>
-            <input type="range" class="range-slider economy-slide" id="slide-luz" min="100" max="1500" step="50" value="${m.luz}">
+            <input type="range" class="range-slider economy-slide" id="slide-agua" min="50" max="1000" step="10" value="250">
           </div>
-          <!-- 8 (Impuestos) -->
+
+          <!-- 8. Luz -->
           <div class="adjustment-control">
-            <div class="adjustment-title-row">
-              <span>Gasto Impuestos</span>
-              <span class="adjustment-val" id="slide-impuestos-lbl">S/ 0</span>
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>Servicio de Energía Eléctrica</span>
+              <span class="adjustment-val" id="slide-luz-lbl">S/ 450</span>
             </div>
-            <input type="range" class="range-slider economy-slide" id="slide-impuestos" min="500" max="5000" step="100" value="${m.impuestos}">
+            <input type="range" class="range-slider economy-slide" id="slide-luz" min="100" max="2000" step="25" value="450">
+          </div>
+
+          <!-- 9. Impuestos -->
+          <div class="adjustment-control">
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>Impuestos y Arbitrios</span>
+              <span class="adjustment-val" id="slide-impuestos-lbl">S/ 1,800</span>
+            </div>
+            <input type="range" class="range-slider economy-slide" id="slide-impuestos" min="200" max="5000" step="50" value="1800">
+          </div>
+
+          <!-- 10. Fondo Reserva % -->
+          <div class="adjustment-control">
+            <div class="adjustment-title-row" style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;">
+              <span>Fondo de Reserva (%)</span>
+              <span class="adjustment-val" id="slide-reserva-pct-lbl">5%</span>
+            </div>
+            <input type="range" class="range-slider economy-slide" id="slide-reserva-pct" min="0" max="25" step="1" value="5">
           </div>
         </div>
       </div>
     `;
 
-    // Sliders bindings
+    const alertBox = document.getElementById('eco-alert');
+    const saveBtn = document.getElementById('btn-save-economics');
+    let numDocentesActivos = 6;
+
+    function calculateEconomicsAndDraw() {
+      const pension = parseInt(document.getElementById('slide-pension').value) || 0;
+      const alumnos = parseInt(document.getElementById('slide-alumnos').value) || 0;
+      const morosidadPct = parseInt(document.getElementById('slide-moro').value) || 0;
+      const sueldoDocente = parseInt(document.getElementById('slide-sueldo-docente').value) || 0;
+      const mantenimiento = parseInt(document.getElementById('slide-gastos').value) || 0;
+      const internet = parseInt(document.getElementById('slide-internet').value) || 0;
+      const agua = parseInt(document.getElementById('slide-agua').value) || 0;
+      const luz = parseInt(document.getElementById('slide-luz').value) || 0;
+      const impuestos = parseInt(document.getElementById('slide-impuestos').value) || 0;
+      const reservaPct = parseInt(document.getElementById('slide-reserva-pct').value) || 0;
+
+      // Labels update
+      document.getElementById('slide-pension-lbl').textContent = `S/ ${pension.toLocaleString()}`;
+      document.getElementById('slide-alumnos-lbl').textContent = `${alumnos} alumnos`;
+      document.getElementById('slide-moro-lbl').textContent = `${morosidadPct}%`;
+      document.getElementById('slide-sueldo-docente-lbl').textContent = `S/ ${sueldoDocente.toLocaleString()}`;
+      document.getElementById('slide-gastos-lbl').textContent = `S/ ${mantenimiento.toLocaleString()}`;
+      document.getElementById('slide-internet-lbl').textContent = `S/ ${internet.toLocaleString()}`;
+      document.getElementById('slide-agua-lbl').textContent = `S/ ${agua.toLocaleString()}`;
+      document.getElementById('slide-luz-lbl').textContent = `S/ ${luz.toLocaleString()}`;
+      document.getElementById('slide-impuestos-lbl').textContent = `S/ ${impuestos.toLocaleString()}`;
+      document.getElementById('slide-reserva-pct-lbl').textContent = `${reservaPct}%`;
+
+      // Financial Engine Formulas
+      const recaudacionTeorica = pension * alumnos;
+      const montoMorosidad = Math.round(recaudacionTeorica * (morosidadPct / 100));
+      const recaudacionEfectiva = recaudacionTeorica - montoMorosidad;
+
+      const planillaDocente = numDocentesActivos * sueldoDocente;
+      const opex = mantenimiento + internet + agua + luz + impuestos;
+      const fondoReservaMonto = Math.round(recaudacionTeorica * (reservaPct / 100));
+      const totalEgresos = planillaDocente + opex + fondoReservaMonto;
+
+      const netBalance = recaudacionEfectiva - totalEgresos;
+      const margenPct = recaudacionEfectiva > 0 ? ((netBalance / recaudacionEfectiva) * 100).toFixed(1) : '0.0';
+      const breakEvenAlumnos = pension > 0 ? Math.ceil(totalEgresos / pension) : 0;
+
+      // Draw Values in KPI Cards
+      document.getElementById('val-recaudacion-teorica').textContent = `S/ ${recaudacionTeorica.toLocaleString()}`;
+      document.getElementById('val-recaudacion-efectiva').textContent = `S/ ${recaudacionEfectiva.toLocaleString()}`;
+      document.getElementById('val-morosidad-monto').textContent = `S/ ${montoMorosidad.toLocaleString()} (${morosidadPct}%)`;
+      document.getElementById('val-planilla-docente').textContent = `S/ ${planillaDocente.toLocaleString()} (${numDocentesActivos} doc.)`;
+      document.getElementById('val-gastos-opex').textContent = `S/ ${opex.toLocaleString()}`;
+      document.getElementById('val-fondo-reserva').textContent = `S/ ${fondoReservaMonto.toLocaleString()} (${reservaPct}%)`;
+
+      const balanceEl = document.getElementById('val-balance');
+      balanceEl.textContent = `S/ ${netBalance.toLocaleString()} (${margenPct}%)`;
+      balanceEl.style.color = netBalance >= 0 ? '#10b981' : '#ef4444';
+
+      document.getElementById('val-break-even').textContent = `${breakEvenAlumnos} alumnos min.`;
+
+      // Health Banner
+      const healthBanner = document.getElementById('eco-health-banner');
+      const healthSpan = healthBanner.querySelector('span');
+      if (netBalance >= 0 && parseFloat(margenPct) >= 15) {
+        healthBanner.style.background = '#dcfce7';
+        healthBanner.style.color = '#15803d';
+        healthBanner.style.borderColor = '#86efac';
+        healthSpan.innerHTML = `💚 <strong>Salud Financiera Excelente</strong> — Superávit mensual de S/ ${netBalance.toLocaleString()} (Margen: ${margenPct}%)`;
+      } else if (netBalance >= 0) {
+        healthBanner.style.background = '#fef3c7';
+        healthBanner.style.color = '#b45309';
+        healthBanner.style.borderColor = '#fde68a';
+        healthSpan.innerHTML = `⚠️ <strong>Salud Financiera Estable</strong> — Superávit ajustado de S/ ${netBalance.toLocaleString()} (Margen: ${margenPct}%)`;
+      } else {
+        healthBanner.style.background = '#fee2e2';
+        healthBanner.style.color = '#b91c1c';
+        healthBanner.style.borderColor = '#fca5a5';
+        healthSpan.innerHTML = `🚨 <strong>Alerta Financiera (Déficit Operativo)</strong> — Pérdida mensual estimada de S/ ${Math.abs(netBalance).toLocaleString()}`;
+      }
+
+      // Chart Badge
+      const margenBadge = document.getElementById('chart-margen-badge');
+      margenBadge.textContent = `Margen Neto: ${margenPct}%`;
+      margenBadge.style.color = netBalance >= 0 ? '#10b981' : '#ef4444';
+
+      // Bar Chart Scaling
+      const maxVal = Math.max(recaudacionTeorica, recaudacionEfectiva, totalEgresos, Math.abs(netBalance), 10000);
+      const fillTeorica = document.getElementById('bar-fill-teorica');
+      const fillEfectiva = document.getElementById('bar-fill-efectiva');
+      const fillEgresos = document.getElementById('bar-fill-egresos');
+      const fillBalance = document.getElementById('bar-fill-balance');
+
+      fillTeorica.style.height = `${(recaudacionTeorica / maxVal) * 100}%`;
+      fillTeorica.querySelector('.chart-bar-tooltip').textContent = `S/ ${recaudacionTeorica.toLocaleString()}`;
+
+      fillEfectiva.style.height = `${(recaudacionEfectiva / maxVal) * 100}%`;
+      fillEfectiva.querySelector('.chart-bar-tooltip').textContent = `S/ ${recaudacionEfectiva.toLocaleString()}`;
+
+      fillEgresos.style.height = `${(totalEgresos / maxVal) * 100}%`;
+      fillEgresos.querySelector('.chart-bar-tooltip').textContent = `S/ ${totalEgresos.toLocaleString()}`;
+
+      fillBalance.style.height = `${(Math.abs(netBalance) / maxVal) * 100}%`;
+      fillBalance.querySelector('.chart-bar-tooltip').textContent = `S/ ${netBalance.toLocaleString()}`;
+      fillBalance.style.backgroundColor = netBalance >= 0 ? '#10b981' : '#ef4444';
+
+      // Expenses Breakdown Bar
+      const totalBudget = totalEgresos > 0 ? totalEgresos : 1;
+      const pctNomina = ((planillaDocente / totalBudget) * 100).toFixed(1);
+      const pctOpex = ((opex / totalBudget) * 100).toFixed(1);
+      const pctReserva = ((fondoReservaMonto / totalBudget) * 100).toFixed(1);
+
+      document.getElementById('breakdown-bar-nomina').style.width = `${pctNomina}%`;
+      document.getElementById('breakdown-bar-opex').style.width = `${pctOpex}%`;
+      document.getElementById('breakdown-bar-reserva').style.width = `${pctReserva}%`;
+
+      document.getElementById('txt-pct-nomina').textContent = `${pctNomina}% (S/ ${planillaDocente.toLocaleString()})`;
+      document.getElementById('txt-pct-opex').textContent = `${pctOpex}% (S/ ${opex.toLocaleString()})`;
+      document.getElementById('txt-pct-reserva').textContent = `${pctReserva}% (S/ ${fondoReservaMonto.toLocaleString()})`;
+    }
+
+    function loadEconomicsData() {
+      fetch(getEconomiaApiUrl(), {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(result => {
+          if (!result || !result.success || !result.data) return;
+
+          const data = result.data;
+          numDocentesActivos = parseInt(data.num_docentes_activos) || 6;
+
+          document.getElementById('slide-pension').value = data.pension_promedio ?? 350;
+          document.getElementById('slide-alumnos').value = data.num_alumnos ?? 120;
+          document.getElementById('slide-moro').value = data.morosidad_pct ?? 15;
+          document.getElementById('slide-sueldo-docente').value = data.sueldo_docente_prom ?? 1800;
+          document.getElementById('slide-gastos').value = data.gastos_mantenimiento ?? 2500;
+          document.getElementById('slide-internet').value = data.gasto_internet ?? 320;
+          document.getElementById('slide-agua').value = data.gasto_agua ?? 250;
+          document.getElementById('slide-luz').value = data.gasto_luz ?? 450;
+          document.getElementById('slide-impuestos').value = data.gasto_impuestos ?? 1800;
+          document.getElementById('slide-reserva-pct').value = data.fondo_reserva_pct ?? 5;
+
+          calculateEconomicsAndDraw();
+        })
+        .catch(err => {
+          console.error('Error al cargar datos económicos del API:', err);
+          calculateEconomicsAndDraw();
+        });
+    }
+
+    function saveEconomicsData() {
+      const payload = {
+        pension_promedio: parseInt(document.getElementById('slide-pension').value),
+        num_alumnos: parseInt(document.getElementById('slide-alumnos').value),
+        morosidad_pct: parseInt(document.getElementById('slide-moro').value),
+        sueldo_docente_prom: parseInt(document.getElementById('slide-sueldo-docente').value),
+        gastos_mantenimiento: parseInt(document.getElementById('slide-gastos').value),
+        gasto_internet: parseInt(document.getElementById('slide-internet').value),
+        gasto_agua: parseInt(document.getElementById('slide-agua').value),
+        gasto_luz: parseInt(document.getElementById('slide-luz').value),
+        gasto_impuestos: parseInt(document.getElementById('slide-impuestos').value),
+        fondo_reserva_pct: parseInt(document.getElementById('slide-reserva-pct').value)
+      };
+
+      fetch(getEconomiaApiUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(resData => {
+          if (!resData || !resData.success) {
+            alertBox.textContent = resData?.message || 'Error al guardar los datos económicos.';
+            alertBox.className = 'badge badge-warning';
+            alertBox.style.display = 'block';
+            return;
+          }
+
+          alertBox.textContent = '✓ Parámetros económicos guardados correctamente en la base de datos.';
+          alertBox.className = 'badge badge-success';
+          alertBox.style.display = 'block';
+          setTimeout(() => { alertBox.style.display = 'none'; }, 3500);
+        })
+        .catch(err => {
+          console.error('Error guardando parámetros económicos:', err);
+          alertBox.textContent = 'No fue posible conectar con el servidor para guardar los parámetros.';
+          alertBox.className = 'badge badge-warning';
+          alertBox.style.display = 'block';
+        });
+    }
+
+    // Bind slider input events for real-time calculations
     const slides = container.querySelectorAll('.economy-slide');
     slides.forEach(slide => {
-      slide.addEventListener('input', function() {
-        // Collect all sliders values and save to Db
-        const metrics = {
-          recaudacion: parseInt(document.getElementById('slide-recaud').value),
-          pagoDocentes: parseInt(document.getElementById('slide-pago').value),
-          morosidadPadres: parseInt(document.getElementById('slide-moro').value),
-          gastosEpoca: parseInt(document.getElementById('slide-gastos').value),
-          internet: parseInt(document.getElementById('slide-internet').value),
-          agua: parseInt(document.getElementById('slide-agua').value),
-          luz: parseInt(document.getElementById('slide-luz').value),
-          impuestos: parseInt(document.getElementById('slide-impuestos').value),
-        };
-
-        window.SchoolDB.updateEconomics(metrics);
-        calculateEconomicsAndDraw();
-      });
+      slide.addEventListener('input', calculateEconomicsAndDraw);
     });
 
-    // Run initial rendering
-    calculateEconomicsAndDraw();
+    saveBtn.addEventListener('click', saveEconomicsData);
+
+    // Initial loading from database
+    loadEconomicsData();
   }
 
   // Expose methods globally for Router config in admin.html
