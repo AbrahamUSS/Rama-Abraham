@@ -23,6 +23,7 @@ if ($base_dir !== '/' && strpos($path, $base_dir) === 0) {
 // Limpiar diagonales iniciales
 $path = ltrim($path, '/');
 
+// los html se deben cambiar a php puro, ya que ejecutan codigo php desde ellos
 // 4. Ruta por defecto: Si la ruta está vacía o apunta a index.php, redirige a la vista principal (index.html).
 if ($path === '' || $path === 'index.php') {
     $path = 'index.html';
