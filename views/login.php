@@ -17,12 +17,7 @@
   <div class="login-container">
     <div class="login-card">
       <div class="login-logo">
-        <!-- Escudo de la institución en formato vectorial SVG -->
-        <svg viewBox="0 0 24 24">
-          <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-          <path d="M2 17l10 5 10-5"></path>
-          <path d="M2 12l10 5 10-5"></path>
-        </svg>
+        <img src="../public/img/logo_ie.jpg" alt="Logo Sagrado Corazón de Jesús" width="80rem" height="80rem">
       </div>
 
       <!-- Cabecera del formulario con el nombre del colegio -->
@@ -49,6 +44,19 @@
               </svg>
             </span>
           </div>
+          <br>
+          <label class="form-label" for="pass">Contraseña</label>
+          <div class="input-wrapper">
+            <!-- Campo de entrada para la  contraseña. Requerido y con autocompletado desactivado -->
+            <input type="password" id="pass" class="form-input" placeholder="Ingrese su Contraseña" autocomplete="off" required>
+            <span class="input-icon">
+              <!-- Icono de candado SVG dentro del campo -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+          </div>
         </div>
 
         <!-- Botón de envío del formulario -->
@@ -57,15 +65,6 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
         </button>
       </form>
-
-      <!-- Indicación/Pistas de credenciales para demostración rápida en fase de desarrollo -->
-      <div class="credentials-hint">
-        <p>Para probar las vistas de prototipo ingrese:</p>
-        <ul>
-          <li>Docente: <span>docen</span></li>
-          <li>Director: <span>dire</span></li>
-        </ul>
-      </div>
     </div>
   </div>
 
