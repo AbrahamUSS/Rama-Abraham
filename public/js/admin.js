@@ -6,6 +6,14 @@
     if (el) el.textContent = title;
   }
 
+  function getDocentesApiUrl() {
+    try {
+      return new URL('../public/api/docentes.php', window.location.href).toString();
+    } catch (error) {
+      return '../public/api/docentes.php';
+    }
+  }
+
   /* ==========================================================================
      1. INFORMACIÓN PERSONAL
      ========================================================================== */
@@ -291,7 +299,219 @@
   }
 
   /* ==========================================================================
-     4. MENSAJERÍA / NOTIFICACIONES (UGEL & DOCENTES TABS)
+     4. AÑADIR DOCENTES: FORMULARIO Y REGISTRO EN BD
+     ========================================================================== */
+  function renderAddDocentes(container) {
+    setPageTitle('Añadir Docentes');
+
+    container.innerHTML = `
+      <div class="card card-accent" style="max-width: 900px; margin: 0 auto;">
+        <div class="card-header">
+          <h3 class="card-title">Registrar Nuevo Docente</h3>
+        </div>
+        <form id="add-docente-form" class="form-layout" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label-desc">Nombre completo</label>
+            <input type="text" id="docente-nombre" class="control-input" placeholder="Ej. Prof. María Pérez López" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label-desc">Tipo de contrato</label>
+            <select id="docente-contrato" class="control-select" required>
+              <option value="">-- Seleccione --</option>
+              <option value="Nombrado">Nombrado</option>
+              <option value="Contratado">Contratado</option>
+              <option value="Temporal">Temporal</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label-desc">Grado académico</label>
+            <input type="text" id="docente-grado" class="control-input" placeholder="Ej. Magíster en Educación" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label-desc">Especialidad</label>
+            <input type="text" id="docente-especialidad" class="control-input" placeholder="Ej. Matemática" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label-desc">Estado</label>
+            <select id="docente-estado" class="control-select">
+              <option value="true">Activo</option>
+              <option value="false">Inactivo</option>
+            </select>
+          </div>
+          <div id="docente-alert" class="badge badge-success" style="display:none; width:100%; text-align:center;">✓ Docente registrado correctamente.</div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Guardar Docente</button>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <h3 class="card-title">Docentes registrados</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="school-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Contrato</th>
+                <th>Grado</th>
+                <th>Especialidad</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="docentes-registrados-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    const form = document.getElementById('add-docente-form');
+    const alertBox = document.getElementById('docente-alert');
+    const tbody = document.getElementById('docentes-registrados-tbody');
+
+    fetch(getDocentesApiUrl(), {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin'
+    })
+      .then(response => response.text())
+      .then(text => {
+        console.log('Prueba de conexión al API:', text.slice(0, 200));
+      })
+      .catch(error => {
+        console.error('Error de conexión al API:', error);
+      });
+
+    function renderRegisteredTeachers() {
+      fetch(getDocentesApiUrl(), {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
+        .then(result => {
+          if (!result.success) {
+            tbody.innerHTML = `<tr><td colspan="6">${result.message}</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = '';
+          result.data.forEach(teacher => {
+            tbody.innerHTML += `
+              <tr>
+                <td style="font-weight: 600;">${teacher.cod_docente}</td>
+                <td>${teacher.nombre_completo}</td>
+                <td>${teacher.tipo_contrato}</td>
+                <td>${teacher.grado_academico}</td>
+                <td>${teacher.especialidad}</td>
+                <td>
+                  <button class="btn btn-sm ${teacher.es_activo ? 'btn-primary' : 'btn-secondary'}" data-id="${teacher.id_docente}" data-active="${teacher.es_activo}" data-action="toggle-status">
+                    ${teacher.es_activo ? 'Activo' : 'Inactivo'}
+                  </button>
+                </td>
+              </tr>
+            `;
+          });
+        })
+        .catch(() => {
+          tbody.innerHTML = `<tr><td colspan="6">No fue posible cargar los docentes.</td></tr>`;
+        });
+    }
+
+    tbody.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-action="toggle-status"]');
+      if (!btn) return;
+
+      const idDocente = btn.getAttribute('data-id');
+      const currentState = btn.getAttribute('data-active') === '1';
+      fetch(getDocentesApiUrl(), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_docente: idDocente, es_activo: !currentState }),
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(() => renderRegisteredTeachers())
+        .catch(() => {});
+    });
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const payload = {
+        nombre_completo: document.getElementById('docente-nombre').value.trim(),
+        tipo_contrato: document.getElementById('docente-contrato').value,
+        grado_academico: document.getElementById('docente-grado').value.trim(),
+        especialidad: document.getElementById('docente-especialidad').value.trim(),
+        es_activo: document.getElementById('docente-estado').value === 'true'
+      };
+
+      const formData = new URLSearchParams();
+      Object.entries(payload).forEach(([key, value]) => {
+        formData.append(key, value === true ? '1' : value === false ? '0' : String(value));
+      });
+
+      fetch(getDocentesApiUrl(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData.toString(),
+        cache: 'no-store',
+        credentials: 'same-origin'
+      })
+        .then(async response => {
+          const rawText = await response.text();
+          let result = null;
+          try {
+            result = rawText ? JSON.parse(rawText) : null;
+          } catch (parseError) {
+            console.error('Respuesta inválida del API', parseError, rawText);
+            throw new Error(rawText || `HTTP ${response.status}`);
+          }
+
+          if (!response.ok) {
+            throw new Error(result?.message || `HTTP ${response.status}`);
+          }
+
+          return result;
+        })
+        .then(result => {
+          if (!result || !result.success) {
+            alertBox.textContent = result?.message || 'No fue posible guardar el docente.';
+            alertBox.className = 'badge badge-warning';
+            alertBox.style.display = 'block';
+            return;
+          }
+
+          form.reset();
+          alertBox.textContent = '✓ Docente registrado correctamente.';
+          alertBox.className = 'badge badge-success';
+          alertBox.style.display = 'block';
+          renderRegisteredTeachers();
+          setTimeout(() => { alertBox.style.display = 'none'; }, 3000);
+        })
+        .catch(error => {
+          console.error('Error guardando docente', error);
+          alertBox.textContent = error?.message || 'No fue posible guardar el docente.';
+          alertBox.className = 'badge badge-warning';
+          alertBox.style.display = 'block';
+        });
+    });
+
+    renderRegisteredTeachers();
+  }
+
+  /* ==========================================================================
+     5. MENSAJERÍA / NOTIFICACIONES (UGEL & DOCENTES TABS)
      ========================================================================== */
   function renderMensajeria(container) {
     setPageTitle('Mensajería y Comunicados');
@@ -826,6 +1046,7 @@
     renderInfoPersonal: renderInfoPersonal,
     renderIncidencias: renderIncidencias,
     renderDocentes: renderDocentes,
+    renderAddDocentes: renderAddDocentes,
     renderMensajeria: renderMensajeria,
     renderPlantillas: renderPlantillas,
     renderEconomia: renderEconomia
