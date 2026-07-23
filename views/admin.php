@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal Docente - IEP Corazón de Jesús College</title>
+  <title>Portal Administrativo - IEP Corazón de Jesús College</title>
   
-  <!-- Hojas de estilo CSS que componen la interfaz del portal docente -->
-  <link rel="stylesheet" href="public/css/variables.css">
-  <link rel="stylesheet" href="public/css/common.css">
-  <link rel="stylesheet" href="public/css/dashboard.css">
-  <link rel="stylesheet" href="public/css/components.css">
+  <!-- Hojas de estilo CSS que componen la interfaz del portal administrativo -->
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/variables.css">
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/common.css">
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/dashboard.css">
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/components.css">
 
-  <!-- Guardia de Seguridad: Bloquea la renderización de la página si el usuario no cuenta con sesión de rol 'docente' -->
-  <script src="public/js/auth.js"></script>
+  <!-- Guardia de Seguridad: Bloquea la renderización de la página si el usuario no cuenta con sesión de rol 'administrativo' -->
+  <script src="<?php echo BASE_URL; ?>public/js/auth.js"></script>
   <script>
     if (window.SchoolAuth) {
-      window.SchoolAuth.checkGuard('docente');
+      window.SchoolAuth.checkGuard('administrativo');
     }
   </script>
 </head>
@@ -48,43 +48,57 @@
           </a>
         </li>
         <li class="menu-item">
-          <a href="#cursos" class="menu-link">
-            <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            <span>Mis Cursos</span>
-          </a>
-        </li>
-        <li class="menu-item">
-          <a href="#actividades" class="menu-link">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            <span>Horarios y Actividades</span>
-          </a>
-        </li>
-        <li class="menu-item">
-          <a href="#asistencia" class="menu-link">
-            <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-            <span>Registrar Asistencia</span>
-          </a>
-        </li>
-        <li class="menu-item">
           <a href="#incidencias" class="menu-link">
             <svg viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            <span>Incidencias</span>
+            <span>Gestión Incidencias</span>
           </a>
         </li>
         <li class="menu-item">
-          <a href="#reportes" class="menu-link">
-            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-            <span>Reportes</span>
+          <a href="#docentes" class="menu-link">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+            <span>Reporte Docentes</span>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a href="#add-docentes" class="menu-link">
+            <!-- UserPlus Icon -->
+            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>
+            <span>Añadir Docentes</span>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a href="#cursos" class="menu-link">
+            <!-- BookOpen Icon -->
+            <svg viewBox="0 0 24 24"><path d="M2 6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"></path><path d="M22 6a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2z"></path><path d="M6 8h4"></path><path d="M6 12h4"></path><path d="M6 16h4"></path></svg>
+            <span>Gestión de Cursos</span>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a href="#mensajeria" class="menu-link">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>Mensajería y UGEL</span>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a href="#plantillas" class="menu-link">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span>Plantillas UGEL</span>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a href="#economia" class="menu-link">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            <span>Gestión Económica</span>
           </a>
         </li>
       </ul>
 
-      <!-- Footer del Sidebar con datos de la sesión del usuario docente -->
+      <!-- Footer del Sidebar con datos de la sesión del usuario administrativo -->
       <div class="sidebar-footer">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <div class="user-avatar" id="sidebar-user-avatar">CR</div>
+          <div class="user-avatar" id="sidebar-user-avatar">JP</div>
           <div style="display: flex; flex-direction: column; overflow: hidden;">
-            <strong style="font-size: 13px; text-overflow: ellipsis; overflow: hidden;" id="sidebar-user-name">Prof. Carlos Rivas</strong>
+            <strong style="font-size: 13px; text-overflow: ellipsis; overflow: hidden;" id="sidebar-user-name">Lic. Jose Perez</strong>
             <span style="font-size: 10px; opacity: 0.7;">IEP Corazón de Jesús</span>
           </div>
         </div>
@@ -113,15 +127,15 @@
           <!-- Campana de Notificaciones -->
           <div class="notification-bell">
             <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            <span class="bell-badge">2</span>
+            <span class="bell-badge">3</span>
           </div>
 
           <!-- Información del perfil logueado -->
           <div class="user-profile">
-            <div class="user-avatar">CR</div>
+            <div class="user-avatar">JP</div>
             <div class="user-info">
-              <span class="user-name" id="navbar-user-name">Prof. Carlos Rivas</span>
-              <span class="user-role">Docente</span>
+              <span class="user-name" id="navbar-user-name">Lic. Jose Perez</span>
+              <span class="user-role">Director</span>
             </div>
           </div>
 
@@ -140,11 +154,11 @@
 
   <!-- Carga de Módulos Javascript -->
   <!-- 1. mockData.js provee el motor CRUD de base de datos simulada en localStorage -->
-  <script src="public/js/mockData.js"></script>
+  <script src="<?php echo BASE_URL; ?>public/js/mockData.js"></script>
   <!-- 2. router.js maneja la navegación SPA controlando el hashchange de la URL -->
-  <script src="public/js/router.js"></script>
-  <!-- 3. docente.js contiene la lógica del docente y renderizado de interfaces de registro de notas, asistencia, etc. -->
-  <script src="public/js/docente.js"></script>
+  <script src="<?php echo BASE_URL; ?>public/js/router.js"></script>
+  <!-- 3. admin.js contiene la lógica del negocio administrativo y renderizado de interfaces -->
+  <script src="<?php echo BASE_URL; ?>public/js/admin.js"></script>
   
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -182,19 +196,21 @@
         layout.classList.remove('mobile-active');
       });
 
-      // Definición de las Rutas del Docente
-      // Cada hash se asocia con un método renderizador expuesto por 'DocenteModule' en docente.js
-      const docentRoutes = {
-        '#info-personal': window.DocenteModule.renderInfoPersonal,
-        '#cursos': window.DocenteModule.renderCursos,
-        '#actividades': window.DocenteModule.renderActividades,
-        '#asistencia': window.DocenteModule.renderAsistencia,
-        '#incidencias': window.DocenteModule.renderIncidencias,
-        '#reportes': window.DocenteModule.renderReportes
+      // Definición de las Rutas Administrativas
+      // Cada hash se asocia con un método renderizador expuesto por 'AdminModule' en admin.js
+      const adminRoutes = {
+        '#info-personal': window.AdminModule.renderInfoPersonal,
+        '#incidencias': window.AdminModule.renderIncidencias,
+        '#docentes': window.AdminModule.renderDocentes,
+        '#add-docentes': window.AdminModule.renderAddDocentes,
+        '#cursos': window.AdminModule.renderCursos,
+        '#mensajeria': window.AdminModule.renderMensajeria,
+        '#plantillas': window.AdminModule.renderPlantillas,
+        '#economia': window.AdminModule.renderEconomia
       };
 
       // Inicialización del Enrutador, cargando '#info-personal' como vista predeterminada
-      window.SchoolRouter.init(docentRoutes, '#info-personal');
+      window.SchoolRouter.init(adminRoutes, '#info-personal');
     });
   </script>
 </body>

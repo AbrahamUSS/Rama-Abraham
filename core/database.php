@@ -6,7 +6,7 @@
      */
     class Conexion {
         private static $host = "localhost;port=3306";
-        private static $db_name = "colegio_db";
+        private static $db_name = "colegio_DB";
         private static $username = "root";
         private static $password = "";
 

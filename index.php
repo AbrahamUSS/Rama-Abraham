@@ -17,20 +17,20 @@ $path = parse_url($request_uri, PHP_URL_PATH);
 // 3. Remover el subdirectorio base
 if ($base_dir !== '/' && strpos($path, $base_dir) === 0) {
     $path = substr($path, strlen($base_dir));
-}
+} 
 
 // Limpiar diagonales iniciales y finales
 $path = trim($path, '/');
 
-// 4. Normalizar rutas de recursos estáticos enviados por error a views/
-if (preg_match('/^views\/(css|js|docs)\//', $path)) {
-    $path = substr($path, 6);
+// 4. Normalizar rutas de recursos estáticos enviados por error a views/ o public/
+if (preg_match('/^(views|public)\/(css|js|docs|img)\//', $path)) {
+    $path = preg_replace('/^(views|public)\//', '', $path);
 }
 
 // --- ENRUTAMIENTO ---
 
 // A. ARCHIVOS ESTÁTICOS (/public)
-if (preg_match('/^(css|js|docs)\//', $path)) {
+if (preg_match('/^(css|js|docs|img)\//', $path)) {
     $file = __DIR__ . '/public/' . $path;
     if (file_exists($file)) {
         $ext = pathinfo($file, PATHINFO_EXTENSION);
@@ -59,8 +59,8 @@ $routes = [
     ''              => 'views/auth/login.php', // Ruta raíz
     'index.php'     => 'views/auth/login.php',
     'login'         => 'views/auth/login.php',
-    'docente'       => 'views/docente.html',
-    'admin'         => 'views/admin.html'
+    'docente'       => 'views/docente.php',
+    'admin'         => 'views/admin.php'
 ];
 
 // Si la ruta solicitada existe en nuestro mapa de rutas
