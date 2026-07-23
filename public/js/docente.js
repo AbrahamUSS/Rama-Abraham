@@ -20,6 +20,18 @@
     if (el) el.textContent = title;
   }
 
+  // Función auxiliar para construir URLs de la API de forma robusta
+  function getApiUrl(endpoint) {
+    let base = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+    if (!base.endsWith('/')) base += '/';
+    try {
+      return new URL(endpoint.replace(/^\//, ''), base).toString();
+    } catch(e) {
+      return new URL(endpoint.replace(/^\//, ''), window.location.origin + base).toString();
+    }
+  }
+
+
   /* ==========================================================================
      1. INFORMACIÓN PERSONAL & MENSAJERÍA
      ========================================================================== */
@@ -475,7 +487,6 @@
           <div style="display: flex; align-items: center; gap: 6px;">
             <span style="width: 12px; height: 12px; background-color: var(--accent-orange); display: inline-block; border-radius: 2px;"></span>
             Eventos Administrativos
-          </div>
           <div style="display: flex; align-items: center; gap: 6px;">
             <span style="width: 12px; height: 12px; background-color: var(--success); display: inline-block; border-radius: 2px;"></span>
             Reuniones / Feriados
@@ -490,25 +501,17 @@
      ========================================================================== */
   function renderAsistencia(container) {
     setPageTitle('Registrar Asistencia');
-    
-    // Refresh DB instance to get updated data
-    const refreshData = () => window.SchoolDB.getData();
-    let db = refreshData();
 
-    let courseOptions = '';
-    db.courses.forEach(c => {
-      courseOptions += `<option value="${c.id}">${c.name}</option>`;
-    });
-
-    let selectedDate = '2026-06-25'; // Simulated default date in the environment
+    let selectedDate = new Date().toISOString().split('T')[0];
+    // Mapa de asignaciones cargadas desde la BD: key = "id_curso-id_grado"
+    let asignacionesMap = {};
 
     container.innerHTML = `
       <div class="selector-panel" style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; padding: 20px; background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--neutral-light); box-shadow: var(--shadow-sm); margin-bottom: 24px;">
         <div class="form-group" style="margin-bottom: 0; flex: 1.5; min-width: 280px;">
           <label class="selector-label" for="asist-course-picker" style="font-weight: 600; margin-bottom: 8px; color: var(--primary-dark); display: block;">Seleccione Curso:</label>
           <select id="asist-course-picker" class="control-select" style="width: 100%;">
-            <option value="" disabled selected>-- Elija un curso --</option>
-            ${courseOptions}
+            <option value="" disabled selected>Cargando cursos...</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 180px;">
@@ -571,6 +574,49 @@
     const markAllPresentBtn = document.getElementById('btn-mark-all-present');
     const saveBtn = document.getElementById('btn-save-asist');
 
+    // ── Cargar cursos desde la API (asignaciones reales de la BD) ──────────
+    fetch(getApiUrl('public/api/cursos.php'), {
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      cache: 'no-store'
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (!res.success || !res.data || !Array.isArray(res.data.assignments)) {
+          picker.innerHTML = '<option value="" disabled selected>No hay cursos disponibles</option>';
+          return;
+        }
+
+        const assignments = res.data.assignments;
+
+        // Eliminar duplicados: mismo curso + grado
+        const seen = new Set();
+        const unique = assignments.filter(a => {
+          const key = `${a.id_curso}-${a.id_grado}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        if (unique.length === 0) {
+          picker.innerHTML = '<option value="" disabled selected>No hay asignaciones registradas</option>';
+          return;
+        }
+
+        // Construir el mapa y las opciones del combobox
+        asignacionesMap = {};
+        let optionsHtml = '<option value="" disabled selected>-- Elija un curso --</option>';
+        unique.forEach(a => {
+          const key = `${a.id_curso}-${a.id_grado}`;
+          asignacionesMap[key] = a;
+          optionsHtml += `<option value="${key}">${a.nombre_curso} &ndash; ${a.nombre_grado} ${a.seccion || ''}</option>`;
+        });
+
+        picker.innerHTML = optionsHtml;
+      })
+      .catch(() => {
+        picker.innerHTML = '<option value="" disabled selected>Error al cargar cursos</option>';
+      });
+
     picker.addEventListener('change', function() {
       area.style.display = 'block';
       loadAttendanceTable();
@@ -608,14 +654,13 @@
 
     function loadAttendanceTable() {
       const tbody = document.getElementById('asistencia-tbody');
-      const courseId = picker.value;
-      // Usamos mockData solo para obtener el nivel del curso seleccionado
-      const course = window.SchoolDB.getData().courses.find(c => c.id === courseId);
+      const key = picker.value;
+      const asig = asignacionesMap[key];
 
-      if (!course) return;
+      if (!asig) return;
 
       document.getElementById('asist-card-title').textContent =
-        `Asistencia - ${course.name} (${selectedDate})`;
+        `Asistencia - ${asig.nombre_curso} \u2013 ${asig.nombre_grado} ${asig.seccion || ''} (${selectedDate})`;
 
       tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;
         color: var(--neutral-medium); padding: 24px;">
@@ -625,9 +670,10 @@
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>Cargando estudiantes...</td></tr>`;
 
-      const apiUrl = new URL('../public/api/asistencia.php', window.location.href);
+      // Filtramos alumnos por id_grado de la asignación seleccionada
+      const apiUrl = new URL(getApiUrl('public/api/asistencia.php'));
       apiUrl.searchParams.set('fecha', selectedDate);
-      apiUrl.searchParams.set('nivel', course.nivel);
+      apiUrl.searchParams.set('id_grado', asig.id_grado);
 
       fetch(apiUrl.toString(), {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -655,7 +701,7 @@
           if (students.length === 0) {
             tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;
               color:var(--neutral-medium);padding:24px;">
-              No se encontraron estudiantes para este nivel.</td></tr>`;
+              No se encontraron estudiantes para este grado.</td></tr>`;
             return;
           }
 
@@ -726,7 +772,7 @@
 
       const indicator = document.getElementById('asist-save-indicator');
 
-      fetch(new URL('../public/api/asistencia.php', window.location.href).toString(), {
+      fetch(getApiUrl('public/api/asistencia.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -739,8 +785,8 @@
         .then(res => {
           if (indicator) {
             indicator.textContent = res.success
-              ? `✓ ${res.message}`
-              : `✗ ${res.message}`;
+              ? `\u2713 ${res.message}`
+              : `\u2717 ${res.message}`;
             indicator.className = 'badge ' + (res.success ? 'badge-success' : 'badge-danger');
             indicator.style.display = 'block';
             setTimeout(() => { indicator.style.display = 'none'; }, 3000);
@@ -748,7 +794,7 @@
         })
         .catch(() => {
           if (indicator) {
-            indicator.textContent = '✗ Error de conexión con el servidor.';
+            indicator.textContent = '\u2717 Error de conexi\u00f3n con el servidor.';
             indicator.className = 'badge badge-danger';
             indicator.style.display = 'block';
             setTimeout(() => { indicator.style.display = 'none'; }, 3000);
@@ -1317,7 +1363,7 @@
         }
 
         // Cargar desde la BD al abrir la pestaña
-        fetch(new URL('../public/api/asistencia.php?tipo=resumen', window.location.href).toString(), {
+        fetch(getApiUrl('public/api/asistencia.php?tipo=resumen'), {
           headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
           cache: 'no-store'
         })

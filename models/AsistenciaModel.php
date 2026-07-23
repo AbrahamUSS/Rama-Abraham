@@ -114,11 +114,15 @@ class AsistenciaModel
     {
         $stmt = $this->pdo->prepare(
             "SELECT a.id_asistencia, a.fecha, a.tipo, a.id_alumno, " .
-            "al.cod_alumno, al.nombre_completo, al.nivel " .
+            "al.cod_alumn AS cod_alumno, " .
+            "CONCAT(p.nombre, ' ', p.ap_paterno, ' ', p.ap_materno) AS nombre_completo, " .
+            "CASE WHEN g.nombre LIKE '%Primaria%' THEN 'Primaria' WHEN g.nombre LIKE '%Secundaria%' THEN 'Secundaria' ELSE 'Inicial' END AS nivel " .
             "FROM ASISTENCIA a " .
             "LEFT JOIN alumnos al ON al.id_alumno = a.id_alumno " .
+            "LEFT JOIN personas p ON p.id_persona = al.id_persona " .
+            "LEFT JOIN grado g ON g.id_grado = al.id_grado " .
             "WHERE a.fecha = ? " .
-            "ORDER BY al.nombre_completo ASC"
+            "ORDER BY nombre_completo ASC"
         );
         $stmt->execute([$fecha]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -145,37 +149,45 @@ class AsistenciaModel
     /**
      * Devuelve TODOS los alumnos activos con su tipo de asistencia para una fecha.
      * Si el alumno no tiene registro ese día, se pre-asigna 'P' por defecto.
-     * Filtrable por nivel educativo.
+     * Filtrable por nivel educativo o id_grado.
      *
      * @param string $fecha   Formato 'YYYY-MM-DD'
      * @param string $nivel   'Primaria', 'Inicial', etc. (vacío = todos)
+     * @param int    $idGrado ID del grado escolar (0 = no filtrar por grado)
      * @return array
      */
-    public function getEstudiantesParaFecha(string $fecha, string $nivel = ''): array
+    public function getEstudiantesParaFecha(string $fecha, string $nivel = '', int $idGrado = 0): array
     {
-        $where  = ['al.es_activo = 1'];
+        $where  = ['1=1'];
         $params = [$fecha];   // para el LEFT JOIN ON a.fecha = ?
 
-        if ($nivel !== '') {
-            $where[]  = 'al.nivel = ?';
-            $params[] = $nivel;
+        if ($idGrado > 0) {
+            $where[]  = "al.id_grado = ?";
+            $params[] = $idGrado;
+        } elseif ($nivel !== '') {
+            $where[]  = "g.nombre LIKE ?";
+            $params[] = "%" . $nivel . "%";
         }
 
         $whereStr = implode(' AND ', $where);
 
         $stmt = $this->pdo->prepare(
-            "SELECT al.id_alumno, al.cod_alumno, al.nombre_completo, al.nivel, " .
+            "SELECT al.id_alumno, al.cod_alumn AS cod_alumno, " .
+            "CONCAT(p.nombre, ' ', p.ap_paterno, ' ', p.ap_materno) AS nombre_completo, " .
+            "CASE WHEN g.nombre LIKE '%Primaria%' THEN 'Primaria' WHEN g.nombre LIKE '%Secundaria%' THEN 'Secundaria' ELSE 'Inicial' END AS nivel, " .
             "g.nombre AS nombre_grado, g.seccion, " .
             "COALESCE(a.tipo, 'P') AS tipo " .
             "FROM alumnos al " .
+            "INNER JOIN personas p ON p.id_persona = al.id_persona " .
             "INNER JOIN grado g ON g.id_grado = al.id_grado " .
             "LEFT JOIN ASISTENCIA a ON a.id_alumno = al.id_alumno AND a.fecha = ? " .
             "WHERE {$whereStr} " .
-            "ORDER BY al.nombre_completo ASC"
+            "ORDER BY nombre_completo ASC"
         );
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
 
     /**
      * Devuelve un resumen de asistencias (P, T, F) agrupado por alumno.
@@ -210,7 +222,9 @@ class AsistenciaModel
 
         $stmt = $this->pdo->prepare(
             "SELECT a.id_alumno, " .
-            "al.cod_alumno, al.nombre_completo, al.nivel, " .
+            "al.cod_alumn AS cod_alumno, " .
+            "CONCAT(p.nombre, ' ', p.ap_paterno, ' ', p.ap_materno) AS nombre_completo, " .
+            "CASE WHEN g.nombre LIKE '%Primaria%' THEN 'Primaria' WHEN g.nombre LIKE '%Secundaria%' THEN 'Secundaria' ELSE 'Inicial' END AS nivel, " .
             "g.nombre AS nombre_grado, g.seccion, " .
             "SUM(CASE WHEN a.tipo = 'P' THEN 1 ELSE 0 END) AS presentes, " .
             "SUM(CASE WHEN a.tipo = 'T' THEN 1 ELSE 0 END) AS tardanzas, " .
@@ -220,10 +234,11 @@ class AsistenciaModel
             "  / NULLIF(COUNT(a.id_asistencia), 0), 1) AS pct_asistencia " .
             "FROM ASISTENCIA a " .
             "LEFT JOIN alumnos al ON al.id_alumno = a.id_alumno " .
+            "LEFT JOIN personas p ON p.id_persona = al.id_persona " .
             "LEFT JOIN grado g ON g.id_grado = al.id_grado " .
             "WHERE {$whereStr} " .
             "GROUP BY a.id_alumno " .
-            "ORDER BY al.nombre_completo ASC"
+            "ORDER BY nombre_completo ASC"
         );
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

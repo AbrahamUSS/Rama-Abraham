@@ -57,17 +57,19 @@ class AsistenciaController
                 ];
             }
 
-            // Alumnos con asistencia precargada para una fecha (con filtro de nivel opcional)
+            // Alumnos con asistencia precargada para una fecha (filtro por id_grado o nivel)
             if (!empty($query['fecha'])) {
-                $fecha = trim((string)$query['fecha']);
-                $nivel = trim((string)($query['nivel'] ?? ''));
-                $data  = $this->model->getEstudiantesParaFecha($fecha, $nivel);
+                $fecha   = trim((string)$query['fecha']);
+                $idGrado = isset($query['id_grado']) ? (int)$query['id_grado'] : 0;
+                $nivel   = trim((string)($query['nivel'] ?? ''));
+                $data    = $this->model->getEstudiantesParaFecha($fecha, $nivel, $idGrado);
                 return [
                     'success' => true,
                     'message' => "Alumnos cargados para la fecha {$fecha}.",
                     'data'    => $data
                 ];
             }
+
 
             // Resumen de asistencias (para reportes)
             if (!empty($query['tipo']) && $query['tipo'] === 'resumen') {
