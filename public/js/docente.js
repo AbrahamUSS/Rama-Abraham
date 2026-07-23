@@ -79,6 +79,7 @@
               Guardar Cambios
             </button>
           </form>
+          <div id="password-change-section" style="margin-top: 20px;"></div>
         </div>
 
         <!-- Right: Message with Director -->
