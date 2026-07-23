@@ -27,14 +27,17 @@ window.SchoolAuth = {
      * La protección real se ejecuta en el servidor con Security::verificarRol().
      */
     checkGuard: function(requiredRole) {
-        // No-op: el servidor ya protege las vistas
+        // La protección principal se ejecuta en el servidor mediante Security::verificarRol()
     },
 
     /**
      * Cierra la sesión redirigiendo al endpoint de logout del servidor.
      */
     logout: function() {
-        var url = typeof BASE_URL !== 'undefined' ? BASE_URL : '/Sistema_Gestion_IE/';
+        var url = (typeof BASE_URL !== 'undefined' && BASE_URL) ? BASE_URL : '/';
+        if (!url.endsWith('/')) {
+            url += '/';
+        }
         window.location.href = url + 'auth/logout';
     }
 };

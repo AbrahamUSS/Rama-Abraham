@@ -9,6 +9,7 @@ Security::verificarRol(['Docente']);
   <title>Portal Docente - IEP Corazón de Jesús College</title>
 
   <script>
+    const BASE_URL = "<?php echo BASE_URL; ?>";
     window.currentSession = {
       name: "<?php echo htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Docente'); ?>",
       email: "<?php echo htmlspecialchars($_SESSION['usuario_email'] ?? ''); ?>",

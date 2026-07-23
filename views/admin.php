@@ -9,6 +9,7 @@ Security::verificarRol(['Director', 'Administrador', 'Director']);
   <title>Portal Administrativo - IEP Corazón de Jesús College</title>
 
   <script>
+    const BASE_URL = "<?php echo BASE_URL; ?>";
     window.currentSession = {
       name: "<?php echo htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Director'); ?>",
       email: "<?php echo htmlspecialchars($_SESSION['usuario_email'] ?? ''); ?>",
