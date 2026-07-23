@@ -18,7 +18,7 @@ services:
     container_name: colegio_mysql
     environment:
       - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=colegio_db
+      - MYSQL_DATABASE=colegio_DB
     ports:
       - "3307:3306"
     volumes:
