@@ -7,9 +7,9 @@
   
   <!-- Hojas de estilo CSS del sistema -->
   <!-- variables.css define los colores corporativos, tamaños y tokens de diseño globales -->
-  <link rel="stylesheet" href="public/css/variables.css">
+  <link rel="stylesheet" href="css/variables.css">
   <!-- login.css define los estilos específicos del formulario, animaciones y contenedor de login -->
-  <link rel="stylesheet" href="public/css/login.css">
+  <link rel="stylesheet" href="css/login.css">
 </head>
 <body>
 
@@ -69,7 +69,7 @@
   </div>
 
   <!-- Carga del script de autenticación para realizar la validación del usuario en cliente -->
-  <script src="public/js/auth.js"></script>
+  <script src="js/auth.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Guardia de seguridad (Guard Check): si el usuario ya tiene sesión iniciada,
@@ -77,9 +77,9 @@
       const session = window.SchoolAuth.getSession();
       if (session) {
         if (session.role === 'docente') {
-          window.location.replace('docente.html?u=docen');
+          window.location.replace('docente');
         } else if (session.role === 'administrativo') {
-          window.location.replace('admin.html?u=dire');
+          window.location.replace('admin');
         }
       }
 
@@ -108,9 +108,9 @@
           // Esperamos un breve instante (800ms) para dar feedback visual y realizamos la redirección
           setTimeout(() => {
             if (res.session.role === 'docente') {
-              window.location.replace('docente.html?u=docen');
+              window.location.replace('docente');
             } else {
-              window.location.replace('admin.html?u=dire');
+              window.location.replace('admin');
             }
           }, 800);
         } else {

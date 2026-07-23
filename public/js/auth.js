@@ -98,7 +98,7 @@
       
       // Si no existe sesión, redirige al login
       if (!session) {
-        window.location.href = 'login.html?u=';
+        window.location.href = 'login';
         return false;
       }
       
@@ -106,9 +106,9 @@
       // se le redirige a la vista correcta según su rol
       if (session.role !== expectedRole) {
         if (session.role === 'docente') {
-          window.location.href = 'docente.html?u=docen';
+          window.location.href = 'public/views/docente';
         } else {
-          window.location.href = 'admin.html?u=dire';
+          window.location.href = 'public/views/admin';
         }
         return false;
       }
@@ -123,7 +123,7 @@
         localStorage.removeItem(SESSION_KEY);
       } catch (e) {}
       // Redirige al login limpiando parámetros de URL
-      window.location.href = 'login.html?u=';
+      window.location.href = 'login';
     }
   };
 })();
