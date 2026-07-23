@@ -1,0 +1,26 @@
+services:
+  web:
+    build: .
+    container_name: colegio_app
+    ports:
+      - "7070:80"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=colegio_DB
+      - DB_USER=root
+      - DB_PASS=rootpassword
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    image: mysql:8.0
+    container_name: colegio_mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=colegio_DB
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./corazonJesus.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    restart: always

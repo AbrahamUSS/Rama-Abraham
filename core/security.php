@@ -59,7 +59,9 @@
         public static function verificarRol($rolesPermitidos)
         {
             self::verificarSesion();
-            if (!in_array($_SESSION['rol_nombre'], $rolesPermitidos)) {
+            $userRol = strtolower(trim($_SESSION['rol_nombre'] ?? ''));
+            $allowed = array_map(function($r) { return strtolower(trim($r)); }, (array)$rolesPermitidos);
+            if (!in_array($userRol, $allowed)) {
                 header("Location: " . BASE_URL . "auth/accesoDenegado");
                 exit;
             }
