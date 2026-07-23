@@ -105,12 +105,20 @@ if (isset($_GET["controller"])) {
 // 4. MAPEO DE VISTAS DIRECTAS / RUTAS BASE
 // ---------------------------------------------------------------------
 $routes = [
-    ''          => 'views/auth/login.php',
-    'index.php' => 'views/auth/login.php',
-    'login'     => 'views/auth/login.php',
-    'auth'      => 'views/auth/login.php',
-    'docente'   => 'views/docente.php',
-    'admin'     => 'views/admin.php'
+    ''                     => 'views/auth/login.php',
+    'index.php'            => 'views/auth/login.php',
+    'login'                => 'views/auth/login.php',
+    'auth'                 => 'views/auth/login.php',
+    'docente'              => 'views/docente.php',
+    'docente.php'          => 'views/docente.php',
+    'views/docente'        => 'views/docente.php',
+    'views/docente.php'    => 'views/docente.php',
+    'admin'                => 'views/admin.php',
+    'admin.php'            => 'views/admin.php',
+    'views/admin'          => 'views/admin.php',
+    'views/admin.php'      => 'views/admin.php',
+    'views/auth/login'     => 'views/auth/login.php',
+    'views/auth/login.php' => 'views/auth/login.php'
 ];
 
 if (array_key_exists($path, $routes)) {

@@ -23,10 +23,8 @@
         self.handleRoute();
       });
       
-      // Ejecuta el enrutador al cargar inicialmente la página completa (DOMContentLoaded)
-      window.addEventListener('DOMContentLoaded', function() {
-        self.handleRoute();
-      });
+      // Ejecuta el enrutador inmediatamente al inicializar la aplicación
+      self.handleRoute();
     },
     
     /**
