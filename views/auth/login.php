@@ -69,7 +69,7 @@
   </div>
 
   <!-- Carga del script de autenticación para realizar la validación del usuario en cliente -->
-  <script src="../public/js/auth.js"></script>
+  <script src="public/js/auth.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       // Guardia de seguridad (Guard Check): si el usuario ya tiene sesión iniciada,
