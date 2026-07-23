@@ -1,3 +1,6 @@
+<?php
+Security::verificarRol(['Docente']);
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,13 +8,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal Docente - IEP Corazón de Jesús College</title>
 
+  <script>
+    window.currentSession = {
+      name: "<?php echo htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Docente'); ?>",
+      email: "<?php echo htmlspecialchars($_SESSION['usuario_email'] ?? ''); ?>",
+      role: "<?php echo htmlspecialchars($_SESSION['rol_nombre'] ?? 'Docente'); ?>"
+    };
+  </script>
+
   <!-- Hojas de estilo CSS que componen la interfaz del portal docente -->
   <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/variables.css">
   <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/common.css">
   <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/dashboard.css">
   <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/components.css">
 
-  <!-- Guardia de Seguridad: Bloquea la renderización de la página si el usuario no cuenta con sesión de rol 'docente' -->
+  <!-- Guardia de Seguridad -->
   <script src="<?php echo BASE_URL; ?>public/js/auth.js"></script>
   <script>
     if (window.SchoolAuth) {

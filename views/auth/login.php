@@ -6,9 +6,11 @@
   <title>Acceso al Sistema - IEP Corazón de Jesús College</title>
   
   <!-- variables.css define los colores corporativos, tamaños y tokens de diseño globales -->
-  <link rel="stylesheet" href="<?php echo BASE_URL; ?>views/css/variables.css">
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/variables.css">
   <!-- login.css define los estilos específicos del formulario, animaciones y contenedor de login -->
-  <link rel="stylesheet" href="<?php echo BASE_URL; ?>views/css/login.css">
+  <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/css/login.css">
+  <!-- jQuery necesario para las peticiones AJAX de inicio de sesión -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
 
@@ -30,11 +32,12 @@
 
       <!-- Formulario de acceso -->
       <form id="login-form" class="login-form">
+        <?php echo Security::campoCSRF(); ?>
         <div class="form-group">
-          <label class="form-label" for="username">Nombre de Usuario</label>
+          <label class="form-label" for="username">Nombre de Usuario / Correo</label>
           <div class="input-wrapper">
             <!-- Campo de entrada para el usuario. Requerido y con autocompletado desactivado -->
-            <input type="text" id="username" class="form-input" placeholder="Ingrese su usuario..." autocomplete="off" required>
+            <input type="text" id="username" name="email" class="form-input" placeholder="Ingrese su usuario..." autocomplete="off" required>
             <span class="input-icon">
               <!-- Icono de usuario SVG dentro del campo -->
               <svg viewBox="0 0 24 24">
@@ -46,8 +49,8 @@
           <br>
           <label class="form-label" for="pass">Contraseña</label>
           <div class="input-wrapper">
-            <!-- Campo de entrada para la  contraseña. Requerido y con autocompletado desactivado -->
-            <input type="password" id="pass" class="form-input" placeholder="Ingrese su Contraseña" autocomplete="off" required>
+            <!-- Campo de entrada para la contraseña. Requerido y con autocompletado desactivado -->
+            <input type="password" id="pass" name="password" class="form-input" placeholder="Ingrese su Contraseña" autocomplete="off" required>
             <span class="input-icon">
               <!-- Icono de candado SVG dentro del campo -->
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -71,6 +74,9 @@
   </div>
 
   <!-- Carga del script de autenticación para realizar la validación del usuario en cliente -->
+  <script>
+    const BASE_URL = "<?php echo BASE_URL; ?>";
+  </script>
   <script src="<?php echo BASE_URL; ?>public/js/auth.js"></script>
   <script>
         $(document).ready(function() {
@@ -78,6 +84,6 @@
                 $('#session-alert').fadeOut('slow');
             }, 5000);
         });
-    </script>
+  </script>
 </body>
 </html>

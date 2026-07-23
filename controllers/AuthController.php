@@ -15,8 +15,14 @@ class AuthController
     public function index()
     {
         if (isset($_SESSION['usuario_id'])) {
-            header("Location: " . BASE_URL . "dashboard");
-            exit;
+            $rol = strtolower(trim($_SESSION['rol_nombre'] ?? ''));
+            if (in_array($rol, ['director', 'administrador', 'admin'])) {
+                header("Location: " . BASE_URL . "admin");
+                exit;
+            } else if ($rol === 'docente') {
+                header("Location: " . BASE_URL . "docente");
+                exit;
+            }
         }
         require_once "views/auth/login.php";
     }
@@ -46,19 +52,30 @@ class AuthController
             }
 
             if (Security::verificarPassword($password, $usuario['password'])) {
-                $_SESSION['usuario_id'] = $usuario['id'];
-                $_SESSION['usuario_nombre'] = $usuario['nombre'];
-                $_SESSION['usuario_email'] = $usuario['email'];
-                $_SESSION['rol_id'] = $usuario['rol_id'];
-                $_SESSION['rol_nombre'] = $usuario['rol_nombre'];
-                $_SESSION['last_activity'] = time();
+                $nombreCompleto = trim($usuario['nombre'] . ' ' . ($usuario['ap_paterno'] ?? ''));
+                $_SESSION['usuario_id']     = $usuario['id'];
+                $_SESSION['usuario_nombre'] = !empty($nombreCompleto) ? $nombreCompleto : $usuario['nombre'];
+                $_SESSION['usuario_email']  = $usuario['email'];
+                $_SESSION['rol_id']         = $usuario['rol_id'];
+                $_SESSION['rol_nombre']     = $usuario['rol_nombre'];
+                $_SESSION['last_activity']  = time();
 
                 session_regenerate_id(true);
 
+                // Determinar la URL de redirección según el rol asignado
+                $rol = strtolower(trim($usuario['rol_nombre']));
+                if (in_array($rol, ['director', 'administrador', 'admin'])) {
+                    $redirect = BASE_URL . "admin";
+                } else if ($rol === 'docente') {
+                    $redirect = BASE_URL . "docente";
+                } else {
+                    $redirect = BASE_URL . "admin";
+                }
+
                 echo json_encode([
-                    "success" => true,
-                    "mensaje" => "Bienvenido, " . $usuario['nombre'],
-                    "redirect" => BASE_URL . "dashboard"
+                    "success"  => true,
+                    "mensaje"  => "Bienvenido, " . $_SESSION['usuario_nombre'],
+                    "redirect" => $redirect
                 ]);
             } else {
                 echo json_encode(["success" => false, "mensaje" => "Correo electrónico o contraseña incorrectos."]);
