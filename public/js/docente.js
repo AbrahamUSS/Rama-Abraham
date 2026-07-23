@@ -20,6 +20,10 @@
     if (el) el.textContent = title;
   }
 
+  function getCursosApiUrl() {
+    return (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + 'public/api/cursos.php';
+  }
+
   /* ==========================================================================
      1. INFORMACIÓN PERSONAL & MENSAJERÍA
      ========================================================================== */
@@ -173,20 +177,18 @@
     setPageTitle('Gestión de Cursos');
 
     const db = window.SchoolDB.getData();
-    let courseOptions = '';
-    db.courses.forEach(c => {
-      courseOptions += `<option value="${c.id}">${c.name}</option>`;
-    });
+    let assignedCourses = [];
 
     container.innerHTML = `
       <!-- selector top panel -->
       <div class="selector-panel">
         <label class="selector-label" for="course-picker">Seleccione Curso:</label>
         <select id="course-picker" class="control-select" style="max-width: 320px;">
-          <option value="" disabled selected>-- Elija un curso --</option>
-          ${courseOptions}
+          <option value="" disabled selected>-- Cargando cursos asignados... --</option>
         </select>
       </div>
+
+      <p id="assigned-courses-message" style="color: var(--neutral-medium); margin: 0 0 16px;"></p>
 
       <div id="course-content-area" style="display: none;">
         <div class="tabs-container">
@@ -206,6 +208,8 @@
     const tabGrades = document.getElementById('tab-grades');
     let activeCourseId = '';
     let currentTab = 'materials'; // materials | grades
+
+    loadAssignedTeacherCourses();
 
     coursePicker.addEventListener('change', function() {
       activeCourseId = this.value;
@@ -229,13 +233,14 @@
 
     function renderActiveTab() {
       const tabContainer = document.getElementById('tab-view-container');
-      const course = db.courses.find(c => c.id === activeCourseId);
+      const course = (window.assignedTeacherCourses || assignedCourses).find(c => String(c.id_curso) === activeCourseId);
+      if (!course) return;
       
       if (currentTab === 'materials') {
         tabContainer.innerHTML = `
           <div class="card card-accent" style="max-width: 600px;">
             <div class="card-header">
-              <h3 class="card-title">Descarga de Material Docente - ${course.name}</h3>
+              <h3 class="card-title">Descarga de Material Docente - ${course.nombre}</h3>
             </div>
             <p style="font-size: 13.5px; color: var(--neutral-medium); margin-bottom: 20px;">
               Descargue los documentos base para el desarrollo del plan curricular académico vigente homologados por el Minedu.
@@ -277,7 +282,7 @@
         if (activeCourseId === 'CIEN5P') subjectKey = 'ciencia';
 
         // Filter students according to course level (Primaria or Inicial)
-        const relevantStudents = db.students.filter(s => s.nivel === course.nivel);
+        const relevantStudents = db.students;
         
         let tableRows = '';
         relevantStudents.forEach(st => {
@@ -302,7 +307,7 @@
         tabContainer.innerHTML = `
           <div class="card">
             <div class="card-header">
-              <h3 class="card-title">Registro de Calificaciones: ${course.name}</h3>
+              <h3 class="card-title">Registro de Calificaciones: ${course.nombre}</h3>
               <div id="grades-save-indicator" class="badge badge-success" style="display:none;">¡Notas guardadas automáticamente!</div>
             </div>
             
@@ -382,6 +387,35 @@
   /* ==========================================================================
      3. ACTIVIDADES: CALENDARIO ESCOLAR
      ========================================================================== */
+  function loadAssignedTeacherCourses() {
+    const coursePicker = document.getElementById('course-picker');
+    const message = document.getElementById('assigned-courses-message');
+    if (!coursePicker || !message) return;
+
+    fetch(`${getCursosApiUrl()}?scope=mine`, { cache: 'no-store', credentials: 'same-origin' })
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(result => {
+        if (!result.success) throw new Error(result.message);
+        window.assignedTeacherCourses = result.data || [];
+        if (!window.assignedTeacherCourses.length) {
+          coursePicker.innerHTML = '<option value="" selected>No tiene cursos asignados</option>';
+          message.textContent = 'Cuando Dirección le asigne un curso, aparecerá únicamente aquí.';
+          return;
+        }
+        coursePicker.innerHTML = '<option value="" disabled selected>-- Elija un curso asignado --</option>' + window.assignedTeacherCourses.map(course =>
+          `<option value="${course.id_curso}">${course.nombre} - ${course.nombre_grado} ${course.seccion}</option>`
+        ).join('');
+        message.textContent = 'Solo se muestran los cursos asignados a su cuenta.';
+      })
+      .catch(() => {
+        coursePicker.innerHTML = '<option value="" selected>No fue posible cargar sus cursos</option>';
+        message.textContent = 'Intente recargar la página.';
+      });
+  }
+
   function renderActividades(container) {
     setPageTitle('Calendario de Actividades');
     

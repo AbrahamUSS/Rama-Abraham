@@ -44,6 +44,31 @@ class DocenteModel
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
         );
 
+        // Las credenciales se vinculan a la misma persona del docente.  Así se
+        // evita duplicar personas y el inicio de sesión puede identificarlo.
+        $this->pdo->exec(
+            "CREATE TABLE IF NOT EXISTS CREDENCIALES (" .
+            "id_credenciales INT AUTO_INCREMENT PRIMARY KEY, " .
+            "username VARCHAR(255) NOT NULL UNIQUE, " .
+            "password_hash VARCHAR(255) NOT NULL, " .
+            "id_persona INT NOT NULL UNIQUE" .
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+        $this->pdo->exec(
+            "CREATE TABLE IF NOT EXISTS ROL (" .
+            "id_rol INT AUTO_INCREMENT PRIMARY KEY, " .
+            "nombre VARCHAR(30) NOT NULL UNIQUE" .
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+        $this->pdo->exec(
+            "CREATE TABLE IF NOT EXISTS USUARIO_ROL (" .
+            "id_usuario_rol INT AUTO_INCREMENT PRIMARY KEY, " .
+            "id_credenciales INT NOT NULL, " .
+            "id_rol INT NOT NULL, " .
+            "UNIQUE KEY uq_usuario_rol (id_credenciales, id_rol)" .
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+
         $this->pdo->exec(
             "ALTER TABLE docentes ADD COLUMN IF NOT EXISTS nombre_completo VARCHAR(150) NOT NULL DEFAULT ''"
         );
@@ -75,6 +100,29 @@ class DocenteModel
             "ORDER BY d.id_docente DESC"
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getCredentials(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT d.id_docente, d.cod_docente, " .
+            "TRIM(CONCAT(p.nombre, ' ', p.ap_paterno, ' ', p.ap_materno)) AS nombre_completo, " .
+            "c.username, r.nombre AS rol " .
+            "FROM docentes d " .
+            "INNER JOIN personas p ON p.id_persona = d.id_persona " .
+            "INNER JOIN CREDENCIALES c ON c.id_persona = p.id_persona " .
+            "INNER JOIN USUARIO_ROL ur ON ur.id_credenciales = c.id_credenciales " .
+            "INNER JOIN ROL r ON r.id_rol = ur.id_rol " .
+            "WHERE LOWER(r.nombre) = 'docente' " .
+            "ORDER BY d.id_docente DESC"
+        );
+        $credentials = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($credentials as &$credential) {
+            // La clave inicial es igual al usuario. El hash nunca se expone.
+            $credential['password_temporal'] = $credential['username'];
+        }
+        unset($credential);
+        return $credentials;
     }
 
     public function create(array $data): array
@@ -133,6 +181,27 @@ class DocenteModel
             $buzonStmt->execute([0]);
             $idBuzon = (int)$this->pdo->lastInsertId();
 
+            $username = $this->buildUsername($nombre, $apPaterno, $apMaterno, $dni);
+            $roleStmt = $this->pdo->prepare("SELECT id_rol FROM ROL WHERE LOWER(nombre) = 'docente' LIMIT 1");
+            $roleStmt->execute();
+            $idRol = (int)$roleStmt->fetchColumn();
+            if ($idRol <= 0) {
+                $createRoleStmt = $this->pdo->prepare("INSERT INTO ROL (nombre) VALUES ('Docente')");
+                $createRoleStmt->execute();
+                $idRol = (int)$this->pdo->lastInsertId();
+            }
+
+            $credentialStmt = $this->pdo->prepare(
+                "INSERT INTO CREDENCIALES (username, password_hash, id_persona) VALUES (?, ?, ?)"
+            );
+            $credentialStmt->execute([$username, password_hash($username, PASSWORD_DEFAULT), $idPersona]);
+            $idCredenciales = (int)$this->pdo->lastInsertId();
+
+            $userRoleStmt = $this->pdo->prepare(
+                "INSERT INTO USUARIO_ROL (id_credenciales, id_rol) VALUES (?, ?)"
+            );
+            $userRoleStmt->execute([$idCredenciales, $idRol]);
+
             $stmt = $this->pdo->prepare(
                 "INSERT INTO docentes (id_persona, cod_docente, tipo_contrato, es_activo, grado_academico, especialidad, id_buzon, nombre_completo) " .
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
@@ -161,6 +230,10 @@ class DocenteModel
             $recordStmt->execute([$insertedId]);
 
             $record = $recordStmt->fetch(PDO::FETCH_ASSOC);
+            if ($record) {
+                $record['username'] = $username;
+                $record['password_temporal'] = $username;
+            }
             return $record ?: [];
         } catch (Throwable $e) {
             $this->pdo->rollBack();
@@ -189,5 +262,14 @@ class DocenteModel
             'calificacion' => $calificacion,
             'observaciones' => $observaciones
         ];
+    }
+
+    private function buildUsername(string $nombre, string $apPaterno, string $apMaterno, string $dni): string
+    {
+        $raw = strtolower(trim($nombre . '.' . $apPaterno . '.' . $apMaterno . '.' . $dni));
+        $normalized = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $raw);
+        $normalized = $normalized === false ? $raw : $normalized;
+        $normalized = preg_replace('/[^a-z0-9]+/', '.', $normalized);
+        return trim((string)$normalized, '.');
     }
 }
