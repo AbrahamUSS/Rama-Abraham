@@ -78,32 +78,15 @@ class DocenteModel
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
         );
 
-        $this->pdo->exec(
-            "ALTER TABLE docentes ADD COLUMN IF NOT EXISTS nombre_completo VARCHAR(150) NOT NULL DEFAULT ''"
-        );
-        $this->pdo->exec(
-            "ALTER TABLE docentes ADD COLUMN IF NOT EXISTS fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-        );
-        $this->pdo->exec(
-            "ALTER TABLE docentes ADD COLUMN IF NOT EXISTS calificacion DECIMAL(3,1) DEFAULT 5.0"
-        );
-        $this->pdo->exec(
-            "ALTER TABLE docentes ADD COLUMN IF NOT EXISTS observaciones TEXT NULL"
-        );
-        try {
-            $cols = $this->pdo->query("SHOW COLUMNS FROM DOCENTES LIKE 'calificacion'")->fetchAll();
-            if (empty($cols)) {
-                $this->pdo->exec("ALTER TABLE DOCENTES ADD calificacion DECIMAL(3,1) DEFAULT 5.0");
-            }
-        } catch (Throwable $e) {
-        }
-
-        try {
-            $cols = $this->pdo->query("SHOW COLUMNS FROM DOCENTES LIKE 'observaciones'")->fetchAll();
-            if (empty($cols)) {
-                $this->pdo->exec("ALTER TABLE DOCENTES ADD observaciones TEXT NULL");
-            }
-        } catch (Throwable $e) {
+        // Ensure extra columns exist (ignore errors if not supported or already present)
+        $addColumnQueries = [
+            "ALTER TABLE docentes ADD COLUMN nombre_completo VARCHAR(150) NOT NULL DEFAULT ''",
+            "ALTER TABLE docentes ADD COLUMN fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE docentes ADD COLUMN calificacion DECIMAL(3,1) DEFAULT 5.0",
+            "ALTER TABLE docentes ADD COLUMN observaciones TEXT NULL",
+        ];
+        foreach ($addColumnQueries as $sql) {
+            try { $this->pdo->exec($sql); } catch (Throwable $e) { /* column may already exist */ }
         }
     }
 
@@ -229,7 +212,6 @@ class DocenteModel
             $buzonStmt->execute();
             $idBuzon = (int)$this->pdo->lastInsertId();
 
-            $username = $this->buildUsername($nombre, $apPaterno, $apMaterno, $dni);
             $roleStmt = $this->pdo->prepare("SELECT id_rol FROM ROL WHERE LOWER(nombre) = 'docente' LIMIT 1");
             $roleStmt->execute();
             $idRol = (int)$roleStmt->fetchColumn();
@@ -239,20 +221,6 @@ class DocenteModel
                 $idRol = (int)$this->pdo->lastInsertId();
             }
 
-            $credentialStmt = $this->pdo->prepare(
-                "INSERT INTO CREDENCIALES (username, password_hash, id_persona) VALUES (?, ?, ?)"
-            );
-            $credentialStmt->execute([$username, password_hash($username, PASSWORD_DEFAULT), $idPersona]);
-            $idCredenciales = (int)$this->pdo->lastInsertId();
-
-            $userRoleStmt = $this->pdo->prepare(
-                "INSERT INTO USUARIO_ROL (id_credenciales, id_rol) VALUES (?, ?)"
-            );
-            $userRoleStmt->execute([$idCredenciales, $idRol]);
-
-            $stmt = $this->pdo->prepare(
-                "INSERT INTO docentes (id_persona, cod_docente, tipo_contrato, es_activo, grado_academico, especialidad, id_buzon, nombre_completo) " .
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             // 5. Insertar DOCENTES
             $docenteStmt = $this->pdo->prepare(
                 "INSERT INTO DOCENTES (id_persona, cod_docente, tipo_contrato, es_activo, grado_academico, especialidad, id_buzon, calificacion) " .
@@ -279,16 +247,7 @@ class DocenteModel
             $credStmt->execute([$username, $hashPass, $idPersona]);
             $idCred = (int)$this->pdo->lastInsertId();
 
-            $record = $recordStmt->fetch(PDO::FETCH_ASSOC);
-            if ($record) {
-                $record['username'] = $username;
-                $record['password_temporal'] = $username;
-            }
-            return $record ?: [];
             // 7. Asignar ROL 'Docente'
-            $rolStmt = $this->pdo->query("SELECT id_rol FROM ROL WHERE nombre = 'Docente' LIMIT 1");
-            $idRol = $rolStmt->fetchColumn() ?: 2;
-
             $userRolStmt = $this->pdo->prepare("INSERT INTO USUARIO_ROL (id_credenciales, id_rol) VALUES (?, ?)");
             $userRolStmt->execute([$idCred, $idRol]);
 
@@ -302,7 +261,9 @@ class DocenteModel
                 'tipo_contrato'   => $tipoContrato,
                 'grado_academico' => $gradoAcademico,
                 'especialidad'    => $especialidad,
-                'es_activo'       => $esActivo
+                'es_activo'       => $esActivo,
+                'username'        => $username,
+                'password_temporal' => $username
             ];
         } catch (Throwable $e) {
             $this->pdo->rollBack();

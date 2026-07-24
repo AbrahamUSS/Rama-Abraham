@@ -38,7 +38,7 @@ class CursoModel
             "SELECT ac.id_asignacionCurso, ac.dia_horario, ac.hora_inicio, ac.hora_fin, ac.fecha_asignacion, ac.fecha_finAsig, " .
             "d.id_docente, d.cod_docente, CONCAT(p.nombre, ' ', p.ap_paterno) AS nombre_completo, " .
             "c.id_curso, c.nombre AS nombre_curso, " .
-            "g.id_grado, g.nombre AS nombre_grado, g.seccion, gc.año " .
+            "g.id_grado, g.nombre AS nombre_grado, g.seccion, gc.anio " .
             "FROM ASIGNACION_CURSO ac " .
             "INNER JOIN DOCENTES d ON d.id_docente = ac.id_docente " .
             "INNER JOIN PERSONAS p ON d.id_persona = p.id_persona " .
