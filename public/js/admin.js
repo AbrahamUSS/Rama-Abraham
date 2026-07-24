@@ -541,19 +541,19 @@
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
             <div class="form-group">
               <label class="form-label-desc">DNI / Documento</label>
-              <input type="text" id="docente-dni" class="control-input" placeholder="Ej. 74859612" maxlength="15" required>
+              <input type="text" id="docente-dni" class="control-input" placeholder="Ej. 74859612" maxlength="8" minlength="8" pattern="[0-9]{8}" inputmode="numeric" data-type="dni" required>
             </div>
             <div class="form-group">
               <label class="form-label-desc">Nombres</label>
-              <input type="text" id="docente-nombre" class="control-input" placeholder="Ej. María Elena" required>
+              <input type="text" id="docente-nombre" class="control-input" placeholder="Ej. María Elena" data-only-letters required>
             </div>
             <div class="form-group">
               <label class="form-label-desc">Apellido Paterno</label>
-              <input type="text" id="docente-ap-paterno" class="control-input" placeholder="Ej. Pérez" required>
+              <input type="text" id="docente-ap-paterno" class="control-input" placeholder="Ej. Pérez" data-only-letters required>
             </div>
             <div class="form-group">
               <label class="form-label-desc">Apellido Materno</label>
-              <input type="text" id="docente-ap-materno" class="control-input" placeholder="Ej. López" required>
+              <input type="text" id="docente-ap-materno" class="control-input" placeholder="Ej. López" data-only-letters required>
             </div>
             <div class="form-group">
               <label class="form-label-desc">Fecha de Nacimiento</label>
@@ -753,6 +753,13 @@
         especialidad: document.getElementById('docente-especialidad').value.trim(),
         es_activo: document.getElementById('docente-estado').value === 'true'
       };
+
+      if (!/^\d{8}$/.test(payload.dni)) {
+        alertBox.textContent = 'El DNI debe contener exactamente 8 números.';
+        alertBox.className = 'badge badge-warning';
+        alertBox.style.display = 'block';
+        return;
+      }
 
       const formData = new URLSearchParams();
       Object.entries(payload).forEach(([key, value]) => {

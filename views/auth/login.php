@@ -98,7 +98,7 @@ require_once __DIR__ . '/../../core/security.php';
           <div class="form-group">
             <label class="form-label" for="recovery-dni">DNI</label>
             <div class="input-wrapper">
-              <input type="text" id="recovery-dni" class="form-input" placeholder="Ingrese su DNI" maxlength="15" autocomplete="off" required>
+              <input type="text" id="recovery-dni" class="form-input" placeholder="DNI de 8 dígitos" maxlength="8" minlength="8" pattern="[0-9]{8}" inputmode="numeric" data-type="dni" autocomplete="off" required>
               <span class="input-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="2" y="5" width="20" height="14" rx="2"></rect>

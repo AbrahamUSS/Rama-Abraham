@@ -42,7 +42,12 @@ if (typeof jQuery !== 'undefined') {
                             mostrarAlertaLogin('error', response.mensaje);
                             $btnText.show();
                             $btnLoading.hide();
-                            $btn.prop('disabled', false);
+
+                            if (response.locked && response.lock_seconds) {
+                                iniciarCuentaRegresivaBloqueo(response.lock_seconds, $btn, $btnText);
+                            } else {
+                                $btn.prop('disabled', false);
+                            }
                         }
                     },
                     error: function() {
@@ -53,6 +58,27 @@ if (typeof jQuery !== 'undefined') {
                     }
                 });
             });
+        }
+
+        var lockoutTimer = null;
+        function iniciarCuentaRegresivaBloqueo(segundos, $btn, $btnText) {
+            if (lockoutTimer) clearInterval(lockoutTimer);
+            var tiempoRestante = segundos;
+            $btn.prop('disabled', true);
+
+            lockoutTimer = setInterval(function() {
+                var mins = Math.floor(tiempoRestante / 60);
+                var secs = tiempoRestante % 60;
+                var format = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+                $btnText.text('Acceso Bloqueado (' + format + ')').show();
+
+                tiempoRestante--;
+                if (tiempoRestante < 0) {
+                    clearInterval(lockoutTimer);
+                    $btnText.text('Iniciar Sesión');
+                    $btn.prop('disabled', false);
+                }
+            }, 1000);
         }
     });
 }
@@ -194,6 +220,11 @@ if (typeof jQuery !== 'undefined') {
                 var correo = $.trim($('#recovery-email').val());
                 if (!dni || !correo) {
                     mostrarAlertaRecovery('error', 'Ingrese su DNI y correo electrónico.');
+                    return;
+                }
+
+                if (!/^\d{8}$/.test(dni)) {
+                    mostrarAlertaRecovery('error', 'El DNI debe contener exactamente 8 números.');
                     return;
                 }
                 $btnText.hide();

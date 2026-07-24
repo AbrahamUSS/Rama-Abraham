@@ -166,6 +166,10 @@ class DocenteModel
             throw new InvalidArgumentException('Complete todos los campos obligatorios del docente (DNI, Nombres, Apellidos, Fecha Nacimiento).');
         }
 
+        if (!preg_match('/^[0-9]{8}$/', $dni)) {
+            throw new InvalidArgumentException('El DNI debe contener exactamente 8 dígitos numéricos.');
+        }
+
         $this->pdo->beginTransaction();
 
         try {

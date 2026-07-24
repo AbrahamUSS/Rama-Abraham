@@ -90,7 +90,7 @@
             </div>
             <div class="form-group">
               <label class="form-label-desc">Teléfono de Contacto</label>
-              <input type="text" id="docent-phone" class="control-input" placeholder="Ingrese teléfono">
+              <input type="text" id="docent-phone" class="control-input" placeholder="Ingrese teléfono" maxlength="15" inputmode="numeric" data-only-numbers>
             </div>
             <div class="form-group">
               <label class="form-label-desc">Dirección de Domicilio</label>

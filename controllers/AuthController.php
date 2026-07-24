@@ -36,6 +36,19 @@ class AuthController
                 return;
             }
 
+            // Verificación de bloqueo por demasiados intentos fallidos
+            if (isset($_SESSION['login_lockout_time']) && time() < $_SESSION['login_lockout_time']) {
+                $remainingSeconds = $_SESSION['login_lockout_time'] - time();
+                $remainingMinutes = ceil($remainingSeconds / 60);
+                echo json_encode([
+                    "success"      => false,
+                    "mensaje"      => "Demasiados intentos fallidos. Su acceso está bloqueado por " . $remainingMinutes . " minuto(s). Intente nuevamente más tarde.",
+                    "locked"       => true,
+                    "lock_seconds" => $remainingSeconds
+                ]);
+                return;
+            }
+
             $email = Security::sanitizarEntrada($_POST['email'] ?? '');
             $password = $_POST['password'] ?? '';
 
@@ -47,11 +60,14 @@ class AuthController
             $usuario = $this->usuarios->getUsuarioByEmail($email);
 
             if (!$usuario) {
-                echo json_encode(["success" => false, "mensaje" => "Correo electrónico o contraseña incorrectos."]);
+                $this->registrarIntentoFallido();
                 return;
             }
 
             if (Security::verificarPassword($password, $usuario['password'])) {
+                // Reiniciar contador de intentos fallidos al tener éxito
+                unset($_SESSION['login_attempts'], $_SESSION['login_lockout_time']);
+
                 $nombreCompleto = trim($usuario['nombre'] . ' ' . ($usuario['ap_paterno'] ?? ''));
                 $_SESSION['usuario_id']     = $usuario['id'];
                 $_SESSION['usuario_nombre'] = !empty($nombreCompleto) ? $nombreCompleto : $usuario['nombre'];
@@ -87,10 +103,33 @@ class AuthController
                     "redirect" => $redirect
                 ]);
             } else {
-                echo json_encode(["success" => false, "mensaje" => "Correo electrónico o contraseña incorrectos."]);
+                $this->registrarIntentoFallido();
             }
         } else {
             echo json_encode(["success" => false, "mensaje" => "Método no permitido."]);
+        }
+    }
+
+    private function registrarIntentoFallido()
+    {
+        $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
+        $maxAttempts = 5;
+
+        if ($_SESSION['login_attempts'] >= $maxAttempts) {
+            $_SESSION['login_lockout_time'] = time() + 300; // 5 minutos de bloqueo
+            $_SESSION['login_attempts'] = 0;
+            echo json_encode([
+                "success"      => false,
+                "mensaje"      => "Ha superado el límite de 5 intentos fallidos. El acceso ha sido bloqueado por 5 minutos.",
+                "locked"       => true,
+                "lock_seconds" => 300
+            ]);
+        } else {
+            $restantes = $maxAttempts - $_SESSION['login_attempts'];
+            echo json_encode([
+                "success" => false,
+                "mensaje" => "Correo electrónico o contraseña incorrectos. Intentos restantes: " . $restantes . "."
+            ]);
         }
     }
 
@@ -169,6 +208,11 @@ class AuthController
 
         if (empty($dni) || empty($correo)) {
             echo json_encode(["success" => false, "mensaje" => "Ingrese su DNI y correo electrónico."]);
+            return;
+        }
+
+        if (!preg_match('/^[0-9]{8}$/', $dni)) {
+            echo json_encode(["success" => false, "mensaje" => "El DNI debe contener exactamente 8 dígitos numéricos."]);
             return;
         }
 
