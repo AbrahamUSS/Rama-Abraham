@@ -67,6 +67,41 @@ class UsuarioModel
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function recuperarPassword(string $dni, string $correo): ?array
+    {
+        $query = "
+            SELECT 
+                c.id_credenciales,
+                c.username,
+                p.nombre,
+                p.ap_paterno,
+                p.ap_materno,
+                p.dni,
+                ep.correo
+            FROM CREDENCIALES c
+            INNER JOIN PERSONAS p       ON c.id_persona = p.id_persona
+            LEFT JOIN EXTRA_PERSONA ep  ON ep.id_persona = p.id_persona
+            WHERE p.dni = :dni
+              AND (ep.correo = :correo1 OR c.username = :correo2)
+            LIMIT 1
+        ";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':dni', $dni);
+        $stmt->bindParam(':correo1', $correo);
+        $stmt->bindParam(':correo2', $correo);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function resetPassword(int $idCredenciales, string $nuevoHash): void
+    {
+        $stmt = $this->conn->prepare(
+            "UPDATE CREDENCIALES SET password_hash = :hash WHERE id_credenciales = :id"
+        );
+        $stmt->execute([':hash' => $nuevoHash, ':id' => $idCredenciales]);
+    }
+
     public function crearUsuario($data)
     {
         $this->conn->beginTransaction();

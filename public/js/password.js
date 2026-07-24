@@ -18,15 +18,33 @@
         <form id="change-password-form" class="form-layout" style="display: flex; flex-direction: column; gap: 14px;">
           <div class="form-group">
             <label class="form-label-desc">Contraseña Actual</label>
-            <input type="password" id="pwd-actual" class="control-input" placeholder="Ingrese su contraseña actual" required>
+            <div class="pwd-input-wrapper">
+              <input type="password" id="pwd-actual" class="control-input" placeholder="Ingrese su contraseña actual" required>
+              <button type="button" class="pwd-toggle-btn" tabindex="-1" aria-label="Mostrar contraseña">
+                <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label-desc">Nueva Contraseña</label>
-            <input type="password" id="pwd-nueva" class="control-input" placeholder="Mínimo 4 caracteres" required>
+            <div class="pwd-input-wrapper">
+              <input type="password" id="pwd-nueva" class="control-input" placeholder="Mínimo 4 caracteres" required>
+              <button type="button" class="pwd-toggle-btn" tabindex="-1" aria-label="Mostrar contraseña">
+                <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label-desc">Confirmar Nueva Contraseña</label>
-            <input type="password" id="pwd-confirmar" class="control-input" placeholder="Repita la nueva contraseña" required>
+            <div class="pwd-input-wrapper">
+              <input type="password" id="pwd-confirmar" class="control-input" placeholder="Repita la nueva contraseña" required>
+              <button type="button" class="pwd-toggle-btn" tabindex="-1" aria-label="Mostrar contraseña">
+                <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+            </div>
           </div>
           <div id="pwd-alert" style="display:none; padding: 10px; border-radius: 6px; font-size: 14px; text-align: center;"></div>
           <button type="submit" class="btn btn-primary" style="width: 100%;">Actualizar Contraseña</button>
@@ -36,6 +54,24 @@
 
     const form = document.getElementById('change-password-form');
     const alertBox = document.getElementById('pwd-alert');
+
+    container.querySelectorAll('.pwd-toggle-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var wrapper = btn.closest('.pwd-input-wrapper');
+        var input = wrapper.querySelector('input[type="password"], input[type="text"]');
+        var eyeOpen = btn.querySelector('.eye-open');
+        var eyeClosed = btn.querySelector('.eye-closed');
+        if (input.type === 'password') {
+          input.type = 'text';
+          eyeOpen.style.display = 'none';
+          eyeClosed.style.display = '';
+        } else {
+          input.type = 'password';
+          eyeOpen.style.display = '';
+          eyeClosed.style.display = 'none';
+        }
+      });
+    });
 
     function showAlert(type, msg) {
       if (type === 'success') {

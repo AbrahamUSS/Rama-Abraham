@@ -146,6 +146,167 @@ function mostrarErrores(errores) {
     }
 }
 
+// =====================================================================
+// 4. RECUPERACIÓN DE CONTRASEÑA
+// =====================================================================
+if (typeof jQuery !== 'undefined') {
+    jQuery(document).ready(function($) {
+        var $showRecovery = $('#show-recovery');
+        var $showLogin = $('#show-login');
+        var $loginForm = $('#login-form');
+        var $recoveryForm = $('#recovery-form');
+        var $recoveryAlert = $('#recovery-alert-box');
+        var $step1 = $('#recovery-step1');
+        var $step2 = $('#recovery-step2');
+        var recoveryUsername = '';
+
+        $showRecovery.on('click', function(e) {
+            e.preventDefault();
+            $loginForm.hide();
+            $recoveryForm.show();
+        });
+
+        $showLogin.on('click', function(e) {
+            e.preventDefault();
+            resetRecoveryForm();
+            $loginForm.show();
+        });
+
+        $recoveryForm.on('submit', function(e) {
+            e.preventDefault();
+
+            var $btn = $('#btn-recovery');
+            var $btnText = $btn.find('.btn-text');
+            var $btnLoading = $btn.find('.btn-loading');
+
+            var csrfToken = '';
+            var csrfInput = $('input[name="csrf_token"]').first();
+            if (csrfInput.length) csrfToken = csrfInput.val();
+
+            if ($step2.is(':visible')) {
+                var nueva = $('#recovery-new-pass').val();
+                var confirmar = $('#recovery-confirm-pass').val();
+
+                if (!nueva || !confirmar) {
+                    mostrarAlertaRecovery('error', 'Complete ambos campos de contraseña.');
+                    return;
+                }
+                if (nueva.length < 4) {
+                    mostrarAlertaRecovery('error', 'La contraseña debe tener al menos 4 caracteres.');
+                    return;
+                }
+                if (nueva !== confirmar) {
+                    mostrarAlertaRecovery('error', 'Las contraseñas no coinciden.');
+                    return;
+                }
+
+                $btnText.hide();
+                $btnLoading.text('Guardando...').show();
+                $btn.prop('disabled', true);
+
+                $.ajax({
+                    url: BASE_URL + 'auth/recuperarPassword',
+                    type: 'POST',
+                    data: {
+                        dni: $('#recovery-dni').val(),
+                        correo: $('#recovery-email').val(),
+                        password_nueva: nueva,
+                        password_confirmar: confirmar,
+                        csrf_token: csrfToken
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        $btnText.show();
+                        $btnLoading.hide();
+                        $btn.prop('disabled', false);
+
+                        if (response.success) {
+                            mostrarAlertaRecovery('success', '¡Contraseña actualizada! Será redirigido al login en 3 segundos.');
+                            setTimeout(function() {
+                                resetRecoveryForm();
+                                $loginForm.show();
+                                if (response.data && response.data.username) {
+                                    $('#username').val(response.data.username).focus();
+                                }
+                            }, 3000);
+                        } else {
+                            mostrarAlertaRecovery('error', response.mensaje);
+                        }
+                    },
+                    error: function() {
+                        mostrarAlertaRecovery('error', 'Error de conexión con el servidor.');
+                        $btnText.show();
+                        $btnLoading.hide();
+                        $btn.prop('disabled', false);
+                    }
+                });
+            } else {
+                var dni = $.trim($('#recovery-dni').val());
+                var correo = $.trim($('#recovery-email').val());
+
+                if (!dni || !correo) {
+                    mostrarAlertaRecovery('error', 'Ingrese su DNI y correo electrónico.');
+                    return;
+                }
+
+                $btnText.hide();
+                $btnLoading.text('Verificando...').show();
+                $btn.prop('disabled', true);
+
+                $.ajax({
+                    url: BASE_URL + 'auth/recuperarPassword',
+                    type: 'POST',
+                    data: { dni: dni, correo: correo, csrf_token: csrfToken },
+                    dataType: 'json',
+                    success: function(response) {
+                        $btnText.show();
+                        $btnLoading.hide();
+                        $btn.prop('disabled', false);
+
+                        if (response.success && response.step === 'identity_ok') {
+                            recoveryUsername = response.data.username;
+                            $('#recovery-username-display').text('Usuario: ' + response.data.username);
+                            $step1.hide();
+                            $step2.show();
+                            $('#recovery-new-pass').focus();
+                            $btnText.text('Guardar Nueva Contraseña');
+                            mostrarAlertaRecovery('success', response.mensaje);
+                        } else {
+                            mostrarAlertaRecovery('error', response.mensaje);
+                        }
+                    },
+                    error: function() {
+                        mostrarAlertaRecovery('error', 'Error de conexión con el servidor.');
+                        $btnText.show();
+                        $btnLoading.hide();
+                        $btn.prop('disabled', false);
+                    }
+                });
+            }
+        });
+
+        function resetRecoveryForm() {
+            $recoveryForm.hide();
+            $recoveryAlert.hide();
+            $recoveryForm[0].reset();
+            $step1.show();
+            $step2.hide();
+            recoveryUsername = '';
+            $('#btn-recovery .btn-text').text('Buscar Cuenta');
+        }
+
+        function mostrarAlertaRecovery(tipo, mensaje) {
+            $recoveryAlert.css('display', 'block');
+            if (tipo === 'success') {
+                $recoveryAlert.css({ backgroundColor: '#d4edda', color: '#155724', border: '1px solid #c3e6cb' });
+            } else {
+                $recoveryAlert.css({ backgroundColor: '#f8d7da', color: '#721c24', border: '1px solid #f5c6cb' });
+            }
+            $recoveryAlert.html(mensaje);
+        }
+    });
+}
+
 function limpiarErrores() {
     var errorEls = document.querySelectorAll('[id^="error-"]');
     errorEls.forEach(function(el) { el.textContent = ''; });

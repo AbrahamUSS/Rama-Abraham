@@ -1,25 +1,4 @@
 <?php
-/**
- * =====================================================================
- * SEED ACADÉMICO COMPLETO - Sistema de Gestión IE Corazón de Jesús
- * =====================================================================
- * 
- * Este script genera la estructura académica completa:
- *  1. Roles base ('Director', 'Docente')
- *  2. Usuarios principales ('director', 'docente', 'prof.matematica', 'prof.comunicacion', 'prof.ciencias')
- *  3. Grados escolares (1° al 3° Primaria, 1° y 2° Secundaria)
- *  4. Cursos (Matemáticas, Comunicación, Ciencias, Historia, Inglés)
- *  5. Relación Grado-Curso (Año 2026)
- *  6. Asignación de Cursos a Docentes con Horarios
- *  7. Sesiones de Clase y Actividades con Pesos
- *  8. Apoderados y Alumnos de Prueba
- *  9. Registro de Notas y Asistencias
- * 10. Registro de Incidencias Disciplinarias
- * 
- * Ejecución desde CLI:     php seed_academico.php
- * Ejecución desde Browser: http://localhost:7070/seed_academico.php
- * =====================================================================
- */
 
 require_once __DIR__ . '/core/database.php';
 require_once __DIR__ . '/core/security.php';
@@ -32,8 +11,6 @@ echo "=============================================================\n\n";
 try {
     $conn = Conexion::connection();
 
-    // FIX: Detect and repair corrupted `año` column name (mojibake: aÃ±o)
-    // Must run BEFORE beginTransaction() because DDL causes implicit COMMIT
     try {
         $cols = $conn->query("SHOW COLUMNS FROM GRADO_CURSO")->fetchAll(PDO::FETCH_COLUMN);
         $hasCorrupted = false;
@@ -125,7 +102,7 @@ try {
     // 2. CREACIÓN DE USUARIOS BASE (DIRECTOR Y DOCENTES)
     // -----------------------------------------------------------------
     echo "2. Registrando usuarios y personal de la institución...\n";
-    
+
     $listaUsuarios = [
         [
             'rol'             => 'Director',
@@ -492,7 +469,7 @@ try {
     // 6. ASIGNACIÓN DE CURSOS A DOCENTES CON HORARIOS (ASIGNACION_CURSO)
     // -----------------------------------------------------------------
     echo "6. Asignando carga horaria a docentes...\n";
-    
+
     // Asignaciones
     $asignacionesConfig = [
         ['docente' => 'docente',           'grado' => '1° Primaria',   'curso' => 'Matemáticas',             'dia' => 'Lunes',     'inicio' => '10:15:00', 'fin' => '11:45:00'],
@@ -507,8 +484,8 @@ try {
         ['docente' => 'prof.arte',         'grado' => '1° Secundaria', 'curso' => 'Arte y Visual',           'dia' => 'Jueves',    'inicio' => '08:00:00', 'fin' => '09:30:00'],
         ['docente' => 'prof.edfisica',     'grado' => '1° Primaria',   'curso' => 'Educación Física',        'dia' => 'Miércoles', 'inicio' => '08:00:00', 'fin' => '09:30:00'],
         ['docente' => 'prof.edfisica',     'grado' => '2° Secundaria', 'curso' => 'Educación Física',        'dia' => 'Lunes',     'inicio' => '14:00:00', 'fin' => '15:30:00'],
-        ['docente' => 'prof.computacion',  'grado' => '3° Primaria',   'curso' => 'Computación e Informática','dia' => 'Jueves',   'inicio' => '10:00:00', 'fin' => '11:30:00'],
-        ['docente' => 'prof.computacion',  'grado' => '2° Secundaria', 'curso' => 'Computación e Informática','dia' => 'Martes',  'inicio' => '14:00:00', 'fin' => '15:30:00'],
+        ['docente' => 'prof.computacion',  'grado' => '3° Primaria',   'curso' => 'Computación e Informática', 'dia' => 'Jueves',   'inicio' => '10:00:00', 'fin' => '11:30:00'],
+        ['docente' => 'prof.computacion',  'grado' => '2° Secundaria', 'curso' => 'Computación e Informática', 'dia' => 'Martes',  'inicio' => '14:00:00', 'fin' => '15:30:00'],
     ];
 
     foreach ($asignacionesConfig as $asig) {
@@ -608,10 +585,10 @@ try {
         ['dni' => '80000002', 'nombre' => 'Sofia',   'paterno' => 'Quispe',  'materno' => 'Huamán',  'cod' => 'ALU-0002', 'grado' => $idGrado1Sec],
         ['dni' => '80000003', 'nombre' => 'Lucas',   'paterno' => 'Mendoza', 'materno' => 'Alvarez', 'cod' => 'ALU-0003', 'grado' => $idGrado1Sec],
         ['dni' => '80000004', 'nombre' => 'Alvarez', 'paterno' => 'Quispe',  'materno' => 'Torres',  'cod' => 'ALU-P001', 'grado' => $idGrado1Pri],
-        ['dni' => '80000005', 'nombre' => 'Camila',  'paterno' => 'Barrient','materno' => 'Flores',  'cod' => 'ALU-P002', 'grado' => $idGrado1Pri],
-        ['dni' => '80000006', 'nombre' => 'Benjamin','paterno' => 'Calderon','materno' => 'Soto',    'cod' => 'ALU-P003', 'grado' => $idGrado1Pri],
+        ['dni' => '80000005', 'nombre' => 'Camila',  'paterno' => 'Barrient', 'materno' => 'Flores',  'cod' => 'ALU-P002', 'grado' => $idGrado1Pri],
+        ['dni' => '80000006', 'nombre' => 'Benjamin', 'paterno' => 'Calderon', 'materno' => 'Soto',    'cod' => 'ALU-P003', 'grado' => $idGrado1Pri],
         ['dni' => '80000007', 'nombre' => 'Luana',   'paterno' => 'Delgado', 'materno' => 'Ruiz',    'cod' => 'ALU-P004', 'grado' => $idGrado1Pri],
-        ['dni' => '80000008', 'nombre' => 'Thiago',  'paterno' => 'Espinoza','materno' => 'Mendoza', 'cod' => 'ALU-P005', 'grado' => $idGrado1Pri],
+        ['dni' => '80000008', 'nombre' => 'Thiago',  'paterno' => 'Espinoza', 'materno' => 'Mendoza', 'cod' => 'ALU-P005', 'grado' => $idGrado1Pri],
     ];
 
     foreach ($alumnosList as $alu) {
@@ -716,7 +693,6 @@ try {
     echo "  📌 Prof. Arte       -> user: prof.arte        | pass: arte123\n";
     echo "  📌 Prof. Ed.Física  -> user: prof.edfisica    | pass: edfisica123\n";
     echo "  📌 Prof. Computación -> user: prof.computacion| pass: computacion123\n\n";
-
 } catch (Exception $e) {
     if (isset($conn) && $conn->inTransaction()) {
         $conn->rollBack();

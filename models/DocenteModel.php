@@ -133,9 +133,12 @@ class DocenteModel
         $stmt = $this->pdo->query(
             "SELECT d.id_docente, d.cod_docente, " .
             "TRIM(CONCAT(p.nombre, ' ', p.ap_paterno, ' ', p.ap_materno)) AS nombre_completo, " .
+            "p.dni, " .
+            "ep.correo, " .
             "c.username, r.nombre AS rol " .
             "FROM DOCENTES d " .
             "INNER JOIN PERSONAS p ON p.id_persona = d.id_persona " .
+            "LEFT JOIN EXTRA_PERSONA ep ON ep.id_persona = p.id_persona " .
             "INNER JOIN CREDENCIALES c ON c.id_persona = p.id_persona " .
             "INNER JOIN USUARIO_ROL ur ON ur.id_credenciales = c.id_credenciales " .
             "INNER JOIN ROL r ON r.id_rol = ur.id_rol " .

@@ -415,3 +415,39 @@ button {
     display: none; /* Hide name/role text on small screens, keep avatar */
   }
 }
+
+.pwd-input-wrapper {
+  position: relative;
+}
+
+.pwd-input-wrapper .control-input {
+  padding-right: 44px;
+}
+
+.pwd-toggle-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--neutral-medium, #888);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.pwd-toggle-btn:hover {
+  color: var(--primary-orange, #E87722);
+}
+
+.pwd-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}

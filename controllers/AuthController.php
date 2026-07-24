@@ -154,4 +154,64 @@ class AuthController
     {
         require_once "views/errors/403.php";
     }
+
+    public function recuperarPassword()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+            echo json_encode(["success" => false, "mensaje" => "Método no permitido."]);
+            return;
+        }
+
+        $dni    = trim($_POST['dni'] ?? '');
+        $correo = trim($_POST['correo'] ?? '');
+
+        if (empty($dni) || empty($correo)) {
+            echo json_encode(["success" => false, "mensaje" => "Ingrese su DNI y correo electrónico."]);
+            return;
+        }
+
+        $usuario = $this->usuarios->recuperarPassword($dni, $correo);
+
+        if (!$usuario) {
+            echo json_encode(["success" => false, "mensaje" => "No se encontró una cuenta con esos datos."]);
+            return;
+        }
+
+        $nueva     = trim($_POST['password_nueva'] ?? '');
+        $confirmar = trim($_POST['password_confirmar'] ?? '');
+
+        if (!empty($nueva) && !empty($confirmar)) {
+            if ($nueva !== $confirmar) {
+                echo json_encode(["success" => false, "mensaje" => "Las contraseñas no coinciden."]);
+                return;
+            }
+            if (strlen($nueva) < 4) {
+                echo json_encode(["success" => false, "mensaje" => "La contraseña debe tener al menos 4 caracteres."]);
+                return;
+            }
+
+            $nuevoHash = Security::encriptarPassword($nueva);
+            $this->usuarios->resetPassword((int)$usuario['id_credenciales'], $nuevoHash);
+
+            echo json_encode([
+                "success" => true,
+                "step"    => "reset_done",
+                "mensaje" => "Contraseña actualizada correctamente. Ahora puede iniciar sesión.",
+                "data"    => ["username" => $usuario['username']]
+            ]);
+            return;
+        }
+
+        echo json_encode([
+            "success" => true,
+            "step"    => "identity_ok",
+            "mensaje" => "Identidad verificada. Ahora establezca su nueva contraseña.",
+            "data"    => [
+                "username" => $usuario['username'],
+                "nombre"   => trim($usuario['nombre'] . ' ' . $usuario['ap_paterno'])
+            ]
+        ]);
+    }
 }

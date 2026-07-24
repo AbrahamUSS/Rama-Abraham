@@ -646,11 +646,11 @@
       <div class="card" id="teacher-credentials-card" style="margin-top: 16px; display: none;">
         <div class="card-header">
           <h3 class="card-title">Credenciales de docentes</h3>
-          <span class="badge badge-warning">Contraseña inicial = usuario</span>
+          <span class="badge badge-warning">Contraseña por defecto: docente123</span>
         </div>
         <div class="table-responsive">
           <table class="school-table">
-            <thead><tr><th>Código</th><th>Docente</th><th>Usuario</th><th>Contraseña inicial</th><th>Rol</th></tr></thead>
+            <thead><tr><th>Código</th><th>Docente</th><th>DNI</th><th>Usuario</th><th>Correo</th><th>Contraseña</th><th>Rol</th></tr></thead>
             <tbody id="teacher-credentials-tbody"></tbody>
           </table>
         </div>
@@ -706,7 +706,7 @@
     }
 
     function renderTeacherCredentials() {
-      credentialsTbody.innerHTML = '<tr><td colspan="5">Cargando credenciales...</td></tr>';
+      credentialsTbody.innerHTML = '<tr><td colspan="7">Cargando credenciales...</td></tr>';
       fetch(`${getDocentesApiUrl()}?action=credentials`, { cache: 'no-store', credentials: 'same-origin' })
         .then(response => {
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -714,20 +714,22 @@
         })
         .then(result => {
           if (!result.success || !result.data.length) {
-            credentialsTbody.innerHTML = '<tr><td colspan="5">No hay credenciales de docentes registradas.</td></tr>';
+            credentialsTbody.innerHTML = '<tr><td colspan="7">No hay credenciales de docentes registradas.</td></tr>';
             return;
           }
           credentialsTbody.innerHTML = result.data.map(credential => `
             <tr>
               <td style="font-weight:600;">${credential.cod_docente}</td>
               <td>${credential.nombre_completo}</td>
+              <td>${credential.dni || '-'}</td>
               <td>${credential.username}</td>
-              <td>${credential.password_temporal}</td>
+              <td>${credential.correo || '-'}</td>
+              <td><code style="background:var(--neutral-bg-hover);padding:2px 8px;border-radius:4px;">${credential.password_temporal}</code></td>
               <td>${credential.rol}</td>
             </tr>
           `).join('');
         })
-        .catch(() => { credentialsTbody.innerHTML = '<tr><td colspan="5">No fue posible cargar las credenciales.</td></tr>'; });
+        .catch(() => { credentialsTbody.innerHTML = '<tr><td colspan="7">No fue posible cargar las credenciales.</td></tr>'; });
     }
 
     credentialsButton.addEventListener('click', function() {

@@ -148,6 +148,38 @@
   color: var(--primary-orange);
 }
 
+.input-wrapper .form-input {
+  padding-right: 44px;
+}
+
+.pwd-toggle-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--neutral-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.pwd-toggle-btn:hover {
+  color: var(--primary-orange);
+}
+
+.pwd-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
 /* Alert Box */
 .login-alert {
   padding: 12px 16px;
