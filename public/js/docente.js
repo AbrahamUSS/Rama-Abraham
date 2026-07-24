@@ -38,6 +38,10 @@
     return (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + 'public/api/actividades.php';
   }
 
+  function getApiUrl(path) {
+    return (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + path;
+  }
+
   async function updateNotificationBadge() {
     const badge = document.getElementById('navbar-notification-count');
     if (!badge) return;
@@ -1043,7 +1047,8 @@
 
       fetch(apiUrl.toString(), {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       })
         .then(r => r.json())
         .then(res => {
@@ -1394,7 +1399,8 @@
     function loadFilterOptions(levelSelect, gradeSelect, callback) {
       fetch(getApiUrl('public/api/reportes.php?tipo=filtros'), {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       })
         .then(r => r.json())
         .then(res => {
@@ -1534,7 +1540,8 @@
 
           fetch(url, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            cache: 'no-store'
+            cache: 'no-store',
+            credentials: 'include'
           })
             .then(r => r.json())
             .then(res => {
@@ -1763,7 +1770,8 @@
 
           fetch(url, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            cache: 'no-store'
+            cache: 'no-store',
+            credentials: 'include'
           })
             .then(r => r.json())
             .then(res => {
@@ -1982,7 +1990,8 @@
 
           fetch(url, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            cache: 'no-store'
+            cache: 'no-store',
+            credentials: 'include'
           })
             .then(r => r.json())
             .then(res => {
