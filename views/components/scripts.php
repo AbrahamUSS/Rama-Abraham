@@ -85,7 +85,8 @@ $scriptNombre = $moduleScript ?? 'admin.js';
         '#cursos': window.AdminModule ? window.AdminModule.renderCursos : null,
         '#mensajeria': window.AdminModule ? window.AdminModule.renderMensajeria : null,
         '#plantillas': window.AdminModule ? window.AdminModule.renderPlantillas : null,
-        '#economia': window.AdminModule ? window.AdminModule.renderEconomia : null
+        '#economia': window.AdminModule ? window.AdminModule.renderEconomia : null,
+        '#reportes': window.DocenteModule ? window.DocenteModule.renderReportes : null
       };
     <?php endif; ?>
 
