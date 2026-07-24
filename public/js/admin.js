@@ -458,6 +458,7 @@
       <div class="card" style="margin-top: 24px;">
         <div class="card-header">
           <h3 class="card-title">Docentes registrados</h3>
+          <button type="button" class="btn btn-secondary btn-sm" id="show-teacher-credentials">Credenciales</button>
         </div>
         <div class="table-responsive">
           <table class="school-table">
@@ -477,11 +478,27 @@
           </table>
         </div>
       </div>
+
+      <div class="card" id="teacher-credentials-card" style="margin-top: 16px; display: none;">
+        <div class="card-header">
+          <h3 class="card-title">Credenciales de docentes</h3>
+          <span class="badge badge-warning">Contraseña inicial = usuario</span>
+        </div>
+        <div class="table-responsive">
+          <table class="school-table">
+            <thead><tr><th>Código</th><th>Docente</th><th>Usuario</th><th>Contraseña inicial</th><th>Rol</th></tr></thead>
+            <tbody id="teacher-credentials-tbody"></tbody>
+          </table>
+        </div>
+      </div>
     `;
 
     const form = document.getElementById('add-docente-form');
     const alertBox = document.getElementById('docente-alert');
     const tbody = document.getElementById('docentes-registrados-tbody');
+    const credentialsButton = document.getElementById('show-teacher-credentials');
+    const credentialsCard = document.getElementById('teacher-credentials-card');
+    const credentialsTbody = document.getElementById('teacher-credentials-tbody');
 
     fetch(getDocentesApiUrl(), {
       method: 'GET',
@@ -536,6 +553,38 @@
           tbody.innerHTML = `<tr><td colspan="8">No fue posible cargar los docentes.</td></tr>`;
         });
     }
+
+    function renderTeacherCredentials() {
+      credentialsTbody.innerHTML = '<tr><td colspan="5">Cargando credenciales...</td></tr>';
+      fetch(`${getDocentesApiUrl()}?action=credentials`, { cache: 'no-store', credentials: 'same-origin' })
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
+        .then(result => {
+          if (!result.success || !result.data.length) {
+            credentialsTbody.innerHTML = '<tr><td colspan="5">No hay credenciales de docentes registradas.</td></tr>';
+            return;
+          }
+          credentialsTbody.innerHTML = result.data.map(credential => `
+            <tr>
+              <td style="font-weight:600;">${credential.cod_docente}</td>
+              <td>${credential.nombre_completo}</td>
+              <td>${credential.username}</td>
+              <td>${credential.password_temporal}</td>
+              <td>${credential.rol}</td>
+            </tr>
+          `).join('');
+        })
+        .catch(() => { credentialsTbody.innerHTML = '<tr><td colspan="5">No fue posible cargar las credenciales.</td></tr>'; });
+    }
+
+    credentialsButton.addEventListener('click', function() {
+      const willShow = credentialsCard.style.display === 'none';
+      credentialsCard.style.display = willShow ? 'block' : 'none';
+      credentialsButton.textContent = willShow ? 'Ocultar credenciales' : 'Credenciales';
+      if (willShow) renderTeacherCredentials();
+    });
 
     tbody.addEventListener('click', function(e) {
       const btn = e.target.closest('[data-action="toggle-status"]');
@@ -618,6 +667,7 @@
           alertBox.className = 'badge badge-success';
           alertBox.style.display = 'block';
           renderRegisteredTeachers();
+          if (credentialsCard.style.display !== 'none') renderTeacherCredentials();
           setTimeout(() => { alertBox.style.display = 'none'; }, 3000);
         })
         .catch(error => {
