@@ -1047,7 +1047,8 @@
 
       fetch(apiUrl.toString(), {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       })
         .then(r => r.json())
         .then(res => {
@@ -1539,7 +1540,8 @@
 
           fetch(url, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            cache: 'no-store'
+            cache: 'no-store',
+            credentials: 'include'
           })
             .then(r => r.json())
             .then(res => {
@@ -1768,7 +1770,8 @@
 
           fetch(url, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            cache: 'no-store'
+            cache: 'no-store',
+            credentials: 'include'
           })
             .then(r => r.json())
             .then(res => {
@@ -1987,7 +1990,8 @@
 
           fetch(url, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            cache: 'no-store'
+            cache: 'no-store',
+            credentials: 'include'
           })
             .then(r => r.json())
             .then(res => {
