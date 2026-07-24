@@ -930,39 +930,62 @@
       </div>
     `;
 
-    const btnGrades = document.getElementById('rep-tab-grades');
+    const btnGrades     = document.getElementById('rep-tab-grades');
     const btnAttendance = document.getElementById('rep-tab-attendance');
-    const btnFilters = document.getElementById('rep-tab-filters');
+    const btnFilters    = document.getElementById('rep-tab-filters');
 
-    btnGrades.addEventListener('click', function() {
-      switchTab('grades');
-    });
-    btnAttendance.addEventListener('click', function() {
-      switchTab('attendance');
-    });
-    btnFilters.addEventListener('click', function() {
-      switchTab('filters');
-    });
+    btnGrades.addEventListener('click', function() { switchTab('grades'); });
+    btnAttendance.addEventListener('click', function() { switchTab('attendance'); });
+    btnFilters.addEventListener('click', function() { switchTab('filters'); });
 
-    // Default view
+    // Helper para cargar niveles y grados dinámicos de la BD
+    function loadFilterOptions(levelSelect, gradeSelect, callback) {
+      fetch(getApiUrl('public/api/reportes.php?tipo=filtros'), {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        cache: 'no-store'
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && res.data) {
+            const data = res.data;
+            if (levelSelect && Array.isArray(data.niveles) && data.niveles.length > 0) {
+              const currentLevel = levelSelect.value;
+              levelSelect.innerHTML = '<option value="todos">Todos los Niveles</option>';
+              data.niveles.forEach(n => {
+                levelSelect.innerHTML += `<option value="${n}">${n}</option>`;
+              });
+              if (currentLevel) levelSelect.value = currentLevel;
+            }
+            if (gradeSelect && Array.isArray(data.grados) && data.grados.length > 0) {
+              const currentGrade = gradeSelect.value;
+              gradeSelect.innerHTML = '<option value="todos">Todos los Grados</option>';
+              data.grados.forEach(g => {
+                gradeSelect.innerHTML += `<option value="${g.nombre}">${g.nombre}</option>`;
+              });
+              if (currentGrade) gradeSelect.value = currentGrade;
+            }
+          }
+          if (callback) callback();
+        })
+        .catch(err => {
+          console.warn('Error cargando opciones de filtros de la BD:', err);
+          if (callback) callback();
+        });
+    }
+
+    // Pestaña inicial
     switchTab('grades');
 
     function switchTab(tabName) {
-      const activeTab = document.querySelector('.tabs-container .active');
-      if (activeTab) activeTab.classList.remove('active');
-      
       const content = document.getElementById('report-view-content');
-      const db = window.SchoolDB.getData();
 
-      // Clear button active classes
       btnGrades.classList.remove('active');
       btnAttendance.classList.remove('active');
       btnFilters.classList.remove('active');
 
       if (tabName === 'grades') {
         btnGrades.classList.add('active');
-        
-        // Render view skeleton with filters
+
         content.innerHTML = `
           <div class="card" style="margin-bottom: 24px; padding: 20px;">
             <div class="card-header" style="padding-bottom: 12px; margin-bottom: 16px;">
@@ -978,6 +1001,7 @@
                 <select id="grades-filter-level" class="control-select">
                   <option value="todos">Todos los Niveles</option>
                   <option value="Primaria">Primaria</option>
+                  <option value="Secundaria">Secundaria</option>
                   <option value="Inicial">Inicial</option>
                 </select>
               </div>
@@ -985,8 +1009,6 @@
                 <label class="form-label-desc" style="font-weight:600; margin-bottom: 6px;">Grado:</label>
                 <select id="grades-filter-grade" class="control-select">
                   <option value="todos">Todos los Grados</option>
-                  <option value="5to Primaria">5to Primaria</option>
-                  <option value="5 años - Inicial">5 años - Inicial</option>
                 </select>
               </div>
               <div class="form-group" style="margin: 0;">
@@ -1001,7 +1023,7 @@
             </div>
           </div>
 
-          <!-- Dynamic Metrics Row -->
+          <!-- Metricas dinámicas -->
           <div class="financial-metrics" id="grades-metrics-row" style="margin-bottom: 24px;"></div>
 
           <div class="charts-container" style="margin-bottom: 24px;">
@@ -1010,7 +1032,7 @@
                 <h3 class="card-title">Promedio General por Asignatura (Filtrado)</h3>
               </div>
               <div class="chart-body" id="grades-chart-body" style="min-height: 180px;">
-                <!-- Chart bars drawn dynamically -->
+                <!-- Barras del gráfico -->
               </div>
             </div>
           </div>
@@ -1021,8 +1043,8 @@
               <span class="badge badge-primary" id="grades-count-badge">0 Alumnos</span>
             </div>
             <div class="table-responsive">
-              <table class="school-table">
-                <thead>
+              <table class="school-table" id="grades-table">
+                <thead id="grades-thead">
                   <tr>
                     <th>Código</th>
                     <th>Apellidos y Nombres</th>
@@ -1034,168 +1056,174 @@
                   </tr>
                 </thead>
                 <tbody id="grades-tbody">
-                  <!-- Rows load here dynamically -->
+                  <tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--neutral-medium);">Cargando reporte de notas de la Base de Datos...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
         `;
 
-        const searchInput = document.getElementById('grades-search');
-        const levelSelect = document.getElementById('grades-filter-level');
-        const gradeSelect = document.getElementById('grades-filter-grade');
-        const performanceSelect = document.getElementById('grades-filter-performance');
+        const searchInput        = document.getElementById('grades-search');
+        const levelSelect        = document.getElementById('grades-filter-level');
+        const gradeSelect        = document.getElementById('grades-filter-grade');
+        const performanceSelect  = document.getElementById('grades-filter-performance');
 
-        function updateGradesReport() {
-          const query = searchInput.value.trim().toLowerCase();
-          const levelVal = levelSelect.value;
-          const gradeVal = gradeSelect.value;
-          const perfVal = performanceSelect.value;
+        loadFilterOptions(levelSelect, gradeSelect, function() {
+          fetchGradesReport();
+        });
 
-          const filtered = db.students.filter(s => {
-            const matchesText = s.name.toLowerCase().includes(query) || s.id.toLowerCase().includes(query);
-            const matchesLevel = levelVal === 'todos' || s.nivel === levelVal;
-            const matchesGrade = gradeVal === 'todos' || s.grado === gradeVal;
-            
-            const mat = s.grades.matematica || 0;
-            const com = s.grades.comunicacion || 0;
-            const cie = s.grades.ciencia || 0;
-            const average = (mat + com + cie) / 3;
+        function fetchGradesReport() {
+          const q    = encodeURIComponent(searchInput.value.trim());
+          const lev  = encodeURIComponent(levelSelect.value);
+          const grd  = encodeURIComponent(gradeSelect.value);
+          const perf = encodeURIComponent(performanceSelect.value);
 
-            let matchesPerf = true;
-            if (perfVal === 'excelente') matchesPerf = average >= 17;
-            else if (perfVal === 'aprobado') matchesPerf = average >= 11 && average < 17;
-            else if (perfVal === 'desaprobado') matchesPerf = average < 11;
+          const url = getApiUrl(`public/api/reportes.php?tipo=notas&search=${q}&nivel=${lev}&grado=${grd}&rendimiento=${perf}`);
 
-            return matchesText && matchesLevel && matchesGrade && matchesPerf;
-          });
+          fetch(url, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            cache: 'no-store'
+          })
+            .then(r => r.json())
+            .then(res => {
+              if (!res.success || !res.data) {
+                document.getElementById('grades-tbody').innerHTML =
+                  `<tr><td colspan="7" style="text-align:center; color: var(--danger); padding:24px;">No se pudo cargar el reporte de la base de datos.</td></tr>`;
+                return;
+              }
 
-          // Compute Metrics
-          let totalMat = 0, totalCom = 0, totalCie = 0, count = 0;
-          let approvedCount = 0;
-          let topStudent = null;
-          let topAverage = -1;
+              const data       = res.data;
+              const alumnos    = data.alumnos || [];
+              const cursos     = data.cursos || [];
+              const metricas   = data.metricas || {};
+              const promediosA = data.promedios_asignatura || [];
 
-          let tableRows = '';
+              // Render Metric Cards
+              const metricsRow = document.getElementById('grades-metrics-row');
+              metricsRow.innerHTML = `
+                <div class="metric-card">
+                  <div class="metric-icon-box" style="background-color: var(--success-bg); color: var(--success);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                  </div>
+                  <div class="metric-details">
+                    <span class="metric-lbl">Promedio General</span>
+                    <span class="metric-val" style="color: ${metricas.promedio_general >= 11 ? 'var(--success)' : 'var(--danger)'};">${metricas.promedio_general || 0}</span>
+                  </div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-icon-box" style="background-color: var(--warning-bg); color: var(--warning);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  </div>
+                  <div class="metric-details">
+                    <span class="metric-lbl">Tasa de Aprobación</span>
+                    <span class="metric-val">${metricas.tasa_aprobacion || 0}%</span>
+                  </div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-icon-box" style="background-color: var(--primary-bg); color: var(--primary);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  </div>
+                  <div class="metric-details">
+                    <span class="metric-lbl">Destacado (Nota: ${metricas.destacado_nota || '-'})</span>
+                    <span class="metric-val" style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;">${metricas.destacado_nombre || 'Ninguno'}</span>
+                  </div>
+                </div>
+              `;
 
-          filtered.forEach(s => {
-            const mat = s.grades.matematica || 0;
-            const com = s.grades.comunicacion || 0;
-            const cie = s.grades.ciencia || 0;
-            const average = parseFloat(((mat + com + cie) / 3).toFixed(1));
-            const avgClass = average < 11 ? 'color: var(--danger); font-weight:700;' : 'color: var(--success); font-weight:700;';
+              // Render Bar Chart
+              const chartBody = document.getElementById('grades-chart-body');
+              let chartHtml = `
+                <div class="chart-axis-lines">
+                  <div class="chart-grid-line"><span>20</span></div>
+                  <div class="chart-grid-line"><span>15</span></div>
+                  <div class="chart-grid-line"><span>10</span></div>
+                  <div class="chart-grid-line"><span>05</span></div>
+                </div>
+              `;
 
-            totalMat += mat;
-            totalCom += com;
-            totalCie += cie;
-            count++;
+              const colors = ['var(--primary-dark)', 'var(--primary-orange)', 'var(--accent-orange)', 'var(--success)', 'var(--warning)'];
 
-            if (average >= 11) approvedCount++;
-            if (average > topAverage) {
-              topAverage = average;
-              topStudent = s.name;
-            }
+              promediosA.forEach((item, idx) => {
+                const avg = item.promedio || 0;
+                const col = colors[idx % colors.length];
+                chartHtml += `
+                  <div class="chart-bar-col">
+                    <div class="chart-bar-fill" style="height: ${(avg / 20) * 100}%; background-color: ${col};">
+                      <div class="chart-bar-tooltip">${avg}</div>
+                    </div>
+                    <span class="chart-bar-label">${item.nombre} (${avg})</span>
+                  </div>
+                `;
+              });
 
-            tableRows += `
-              <tr>
-                <td style="font-weight:600;">${s.id}</td>
-                <td>${s.name}</td>
-                <td>${s.grado}</td>
-                <td style="text-align: center;">${mat}</td>
-                <td style="text-align: center;">${com}</td>
-                <td style="text-align: center;">${cie}</td>
-                <td style="text-align: center; ${avgClass}">${average}</td>
-              </tr>
-            `;
-          });
+              chartBody.innerHTML = chartHtml;
 
-          const avgMat = count > 0 ? parseFloat((totalMat / count).toFixed(1)) : 0;
-          const avgCom = count > 0 ? parseFloat((totalCom / count).toFixed(1)) : 0;
-          const avgCie = count > 0 ? parseFloat((totalCie / count).toFixed(1)) : 0;
-          const totalAvg = count > 0 ? parseFloat(((avgMat + avgCom + avgCie) / 3).toFixed(1)) : 0;
-          const approvalRate = count > 0 ? Math.round((approvedCount / count) * 100) : 100;
+              // Render Table Header & Rows
+              const thead = document.getElementById('grades-thead');
+              let headHtml = `
+                <tr>
+                  <th>Código</th>
+                  <th>Apellidos y Nombres</th>
+                  <th>Grado</th>
+              `;
+              cursos.forEach(c => {
+                headHtml += `<th style="text-align: center;">${c.nombre}</th>`;
+              });
+              headHtml += `<th style="text-align: center;">Promedio</th></tr>`;
+              thead.innerHTML = headHtml;
 
-          // Render Metrics Cards
-          const metricsRow = document.getElementById('grades-metrics-row');
-          metricsRow.innerHTML = `
-            <div class="metric-card">
-              <div class="metric-icon-box" style="background-color: var(--success-bg); color: var(--success);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-              </div>
-              <div class="metric-details">
-                <span class="metric-lbl">Promedio General</span>
-                <span class="metric-val" style="color: ${totalAvg >= 11 ? 'var(--success)' : 'var(--danger)'};">${totalAvg}</span>
-              </div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-icon-box" style="background-color: var(--warning-bg); color: var(--warning);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              </div>
-              <div class="metric-details">
-                <span class="metric-lbl">Tasa de Aprobación</span>
-                <span class="metric-val">${approvalRate}%</span>
-              </div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-icon-box" style="background-color: var(--primary-bg); color: var(--primary);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-              </div>
-              <div class="metric-details">
-                <span class="metric-lbl">Destacado (Nota: ${topAverage >= 0 ? topAverage : '-'})</span>
-                <span class="metric-val" style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;">${topStudent || 'Ninguno'}</span>
-              </div>
-            </div>
-          `;
+              const tbody = document.getElementById('grades-tbody');
+              if (alumnos.length === 0) {
+                const colSpan = 4 + cursos.length;
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; color: var(--neutral-medium); padding: 24px;">No se encontraron calificaciones con los filtros seleccionados.</td></tr>`;
+              } else {
+                let tableRows = '';
+                alumnos.forEach(s => {
+                  const average  = parseFloat(s.promedio) || 0;
+                  const avgClass = average < 11 ? 'color: var(--danger); font-weight:700;' : 'color: var(--success); font-weight:700;';
 
-          // Draw Chart Bars
-          const chartBody = document.getElementById('grades-chart-body');
-          chartBody.innerHTML = `
-            <div class="chart-axis-lines">
-              <div class="chart-grid-line"><span>20</span></div>
-              <div class="chart-grid-line"><span>15</span></div>
-              <div class="chart-grid-line"><span>10</span></div>
-              <div class="chart-grid-line"><span>05</span></div>
-            </div>
-            
-            <div class="chart-bar-col">
-              <div class="chart-bar-fill" style="height: ${(avgMat/20)*100}%; background-color: var(--primary-dark);">
-                <div class="chart-bar-tooltip">${avgMat}</div>
-              </div>
-              <span class="chart-bar-label">Matemática (${avgMat})</span>
-            </div>
+                  tableRows += `
+                    <tr>
+                      <td style="font-weight:600;">${s.cod_alumno}</td>
+                      <td>${s.nombre_completo}</td>
+                      <td>${s.nombre_grado}${s.seccion ? ' ' + s.seccion : ''}</td>
+                  `;
 
-            <div class="chart-bar-col">
-              <div class="chart-bar-fill" style="height: ${(avgCom/20)*100}%; background-color: var(--primary-orange);">
-                <div class="chart-bar-tooltip">${avgCom}</div>
-              </div>
-              <span class="chart-bar-label">Comunicación (${avgCom})</span>
-            </div>
+                  cursos.forEach(c => {
+                    const gradeVal = s.notas_por_curso && s.notas_por_curso[c.id_curso] !== null
+                      ? s.notas_por_curso[c.id_curso]
+                      : '-';
+                    tableRows += `<td style="text-align: center;">${gradeVal !== null && gradeVal !== undefined ? gradeVal : '-'}</td>`;
+                  });
 
-            <div class="chart-bar-col">
-              <div class="chart-bar-fill" style="height: ${(avgCie/20)*100}%; background-color: var(--accent-orange);">
-                <div class="chart-bar-tooltip">${avgCie}</div>
-              </div>
-              <span class="chart-bar-label">Ciencia y Tec. (${avgCie})</span>
-            </div>
-          `;
+                  tableRows += `
+                      <td style="text-align: center; ${avgClass}">${average > 0 ? average : '-'}</td>
+                    </tr>
+                  `;
+                });
+                tbody.innerHTML = tableRows;
+              }
 
-          const tbody = document.getElementById('grades-tbody');
-          if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--neutral-medium); padding: 24px;">No se encontraron calificaciones con los filtros seleccionados.</td></tr>`;
-          } else {
-            tbody.innerHTML = tableRows;
-          }
-
-          document.getElementById('grades-count-badge').textContent = `${filtered.length} Alumnos`;
+              document.getElementById('grades-count-badge').textContent = `${alumnos.length} Alumnos`;
+            })
+            .catch(err => {
+              console.error('Error al cargar reporte de notas:', err);
+              document.getElementById('grades-tbody').innerHTML =
+                `<tr><td colspan="7" style="text-align:center; color: var(--danger); padding:24px;">Error de conexión con el servidor.</td></tr>`;
+            });
         }
 
-        searchInput.addEventListener('input', updateGradesReport);
-        levelSelect.addEventListener('change', updateGradesReport);
-        gradeSelect.addEventListener('change', updateGradesReport);
-        performanceSelect.addEventListener('change', updateGradesReport);
+        let debounceTimer;
+        function onGradesFilterChange() {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(fetchGradesReport, 250);
+        }
 
-        updateGradesReport();
-      } 
+        searchInput.addEventListener('input', onGradesFilterChange);
+        levelSelect.addEventListener('change', fetchGradesReport);
+        gradeSelect.addEventListener('change', fetchGradesReport);
+        performanceSelect.addEventListener('change', fetchGradesReport);
+      }
       else if (tabName === 'attendance') {
         btnAttendance.classList.add('active');
 
@@ -1214,6 +1242,7 @@
                 <select id="att-filter-level" class="control-select">
                   <option value="todos">Todos los Niveles</option>
                   <option value="Primaria">Primaria</option>
+                  <option value="Secundaria">Secundaria</option>
                   <option value="Inicial">Inicial</option>
                 </select>
               </div>
@@ -1221,8 +1250,6 @@
                 <label class="form-label-desc" style="font-weight:600; margin-bottom: 6px;">Grado:</label>
                 <select id="att-filter-grade" class="control-select">
                   <option value="todos">Todos los Grados</option>
-                  <option value="5to Primaria">5to Primaria</option>
-                  <option value="5 años - Inicial">5 años - Inicial</option>
                 </select>
               </div>
               <div class="form-group" style="margin: 0;">
@@ -1237,7 +1264,6 @@
             </div>
           </div>
 
-          <!-- Dynamic Attendance Metrics -->
           <div class="financial-metrics" id="att-metrics-row" style="margin-bottom: 24px;"></div>
 
           <div class="card">
@@ -1259,7 +1285,7 @@
                   </tr>
                 </thead>
                 <tbody id="att-tbody">
-                  <!-- Rows load here dynamically -->
+                  <tr><td colspan="7" style="text-align:center; padding:24px; color:var(--neutral-medium);">Cargando reporte de asistencias de la BD...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1271,116 +1297,132 @@
         const gradeSelect = document.getElementById('att-filter-grade');
         const rangeSelect = document.getElementById('att-filter-range');
 
-        // Datos reales de la BD (se cargan una vez, se filtran en cliente)
-        let attData = [];
+        loadFilterOptions(levelSelect, gradeSelect, function() {
+          fetchAttendanceReport();
+        });
 
-        function renderAttendanceTable() {
-          const query      = searchInput.value.trim().toLowerCase();
-          const levelVal   = levelSelect.value;
-          const gradeVal   = gradeSelect.value;
-          const rangeVal   = rangeSelect.value;
+        function fetchAttendanceReport() {
+          const q   = encodeURIComponent(searchInput.value.trim());
+          const lev = encodeURIComponent(levelSelect.value);
+          const grd = encodeURIComponent(gradeSelect.value);
+          const rng = encodeURIComponent(rangeSelect.value);
 
-          const filtered = attData.filter(s => {
-            const matchesText  = s.nombre_completo.toLowerCase().includes(query) ||
-                                 s.cod_alumno.toLowerCase().includes(query);
-            const matchesLevel = levelVal === 'todos' || s.nivel === levelVal;
-            const matchesGrade = gradeVal === 'todos' || s.nombre_grado === gradeVal;
-            const pct = parseFloat(s.pct_asistencia) || 100;
-            let matchesRange = true;
-            if (rangeVal === 'perfecta') matchesRange = pct === 100;
-            else if (rangeVal === 'regular') matchesRange = pct >= 80 && pct < 100;
-            else if (rangeVal === 'critica') matchesRange = pct < 80;
-            return matchesText && matchesLevel && matchesGrade && matchesRange;
-          });
+          const url = getApiUrl(`public/api/reportes.php?tipo=asistencia&search=${q}&nivel=${lev}&grado=${grd}&range=${rng}`);
 
-          let presentCount = 0, lateCount = 0, absentCount = 0, totalAtt = 0;
-          let tableRows = '';
+          fetch(url, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            cache: 'no-store'
+          })
+            .then(r => r.json())
+            .then(res => {
+              if (!res.success || !Array.isArray(res.data)) {
+                document.getElementById('att-tbody').innerHTML =
+                  `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:24px;">Error al cargar asistencias de la BD.</td></tr>`;
+                return;
+              }
 
-          filtered.forEach(s => {
-            const p   = parseInt(s.presentes)  || 0;
-            const t   = parseInt(s.tardanzas)  || 0;
-            const f   = parseInt(s.faltas)     || 0;
-            const pct = parseFloat(s.pct_asistencia) || 100;
-            presentCount += p; lateCount += t; absentCount += f;
-            totalAtt += p + t + f;
-            const badCell = pct < 80
-              ? 'background-color:var(--danger-bg);color:var(--danger);font-weight:700;'
-              : '';
-            tableRows += `
-              <tr>
-                <td style="font-weight:600;">${s.cod_alumno}</td>
-                <td>${s.nombre_completo}</td>
-                <td>${s.nombre_grado}${s.seccion ? ' &ndash; ' + s.seccion : ''}</td>
-                <td style="text-align:center;color:var(--success);font-weight:600;">${p}</td>
-                <td style="text-align:center;color:var(--warning);font-weight:600;">${t}</td>
-                <td style="text-align:center;color:var(--danger);font-weight:600;">${f}</td>
-                <td style="text-align:center;${badCell}">${pct}%</td>
-              </tr>
-            `;
-          });
+              let attData = res.data;
 
-          const ratePresent = totalAtt > 0 ? Math.round((presentCount / totalAtt) * 100) : 100;
-          const rateLate    = totalAtt > 0 ? Math.round((lateCount    / totalAtt) * 100) : 0;
-          const rateAbsent  = totalAtt > 0 ? Math.round((absentCount  / totalAtt) * 100) : 0;
+              // Filtrado adicional local si es necesario
+              const query      = searchInput.value.trim().toLowerCase();
+              const levelVal   = levelSelect.value;
+              const gradeVal   = gradeSelect.value;
+              const rangeVal   = rangeSelect.value;
 
-          const metricsRow = document.getElementById('att-metrics-row');
-          metricsRow.innerHTML = `
-            <div class="metric-card">
-              <div class="metric-icon-box" style="background-color:var(--success-bg);color:var(--success);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-              </div>
-              <div class="metric-details">
-                <span class="metric-lbl">Tasa de Asistencia</span>
-                <span class="metric-val" style="color:var(--success);">${ratePresent}%</span>
-              </div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-icon-box" style="background-color:var(--warning-bg);color:var(--warning);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              </div>
-              <div class="metric-details">
-                <span class="metric-lbl">Tardanzas Totales</span>
-                <span class="metric-val" style="color:var(--warning);">${rateLate}%</span>
-              </div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-icon-box" style="background-color:var(--danger-bg);color:var(--danger);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-              </div>
-              <div class="metric-details">
-                <span class="metric-lbl">Inasistencias Totales</span>
-                <span class="metric-val" style="color:var(--danger);">${rateAbsent}%</span>
-              </div>
-            </div>
-          `;
+              const filtered = attData.filter(s => {
+                const matchesText  = (s.nombre_completo && s.nombre_completo.toLowerCase().includes(query)) ||
+                                     (s.cod_alumno && s.cod_alumno.toLowerCase().includes(query));
+                const matchesLevel = levelVal === 'todos' || s.nivel === levelVal;
+                const matchesGrade = gradeVal === 'todos' || s.nombre_grado === gradeVal || (s.nombre_grado + ' ' + (s.seccion||'')).trim() === gradeVal;
+                const pct = parseFloat(s.pct_asistencia) || 100;
+                let matchesRange = true;
+                if (rangeVal === 'perfecta') matchesRange = pct === 100;
+                else if (rangeVal === 'regular') matchesRange = pct >= 80 && pct < 100;
+                else if (rangeVal === 'critica') matchesRange = pct < 80;
+                return matchesText && matchesLevel && matchesGrade && matchesRange;
+              });
 
-          const tbody = document.getElementById('att-tbody');
-          tbody.innerHTML = filtered.length === 0
-            ? `<tr><td colspan="7" style="text-align:center;color:var(--neutral-medium);padding:24px;">No se encontraron registros con los filtros seleccionados.</td></tr>`
-            : tableRows;
+              let presentCount = 0, lateCount = 0, absentCount = 0, totalAtt = 0;
+              let tableRows = '';
 
-          document.getElementById('att-count-badge').textContent = `${filtered.length} Alumno(s)`;
+              filtered.forEach(s => {
+                const p   = parseInt(s.presentes)  || 0;
+                const t   = parseInt(s.tardanzas)  || 0;
+                const f   = parseInt(s.faltas)     || 0;
+                const pct = parseFloat(s.pct_asistencia) || 100;
+                presentCount += p; lateCount += t; absentCount += f;
+                totalAtt += p + t + f;
+
+                const badCell = pct < 80
+                  ? 'background-color:var(--danger-bg);color:var(--danger);font-weight:700;'
+                  : '';
+
+                tableRows += `
+                  <tr>
+                    <td style="font-weight:600;">${s.cod_alumno}</td>
+                    <td>${s.nombre_completo}</td>
+                    <td>${s.nombre_grado}${s.seccion ? ' ' + s.seccion : ''}</td>
+                    <td style="text-align:center;color:var(--success);font-weight:600;">${p}</td>
+                    <td style="text-align:center;color:var(--warning);font-weight:600;">${t}</td>
+                    <td style="text-align:center;color:var(--danger);font-weight:600;">${f}</td>
+                    <td style="text-align:center;${badCell}">${pct}%</td>
+                  </tr>
+                `;
+              });
+
+              const ratePresent = totalAtt > 0 ? Math.round((presentCount / totalAtt) * 100) : 100;
+              const rateLate    = totalAtt > 0 ? Math.round((lateCount    / totalAtt) * 100) : 0;
+              const rateAbsent  = totalAtt > 0 ? Math.round((absentCount  / totalAtt) * 100) : 0;
+
+              const metricsRow = document.getElementById('att-metrics-row');
+              metricsRow.innerHTML = `
+                <div class="metric-card">
+                  <div class="metric-icon-box" style="background-color:var(--success-bg);color:var(--success);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                  </div>
+                  <div class="metric-details">
+                    <span class="metric-lbl">Tasa de Asistencia</span>
+                    <span class="metric-val" style="color:var(--success);">${ratePresent}%</span>
+                  </div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-icon-box" style="background-color:var(--warning-bg);color:var(--warning);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  </div>
+                  <div class="metric-details">
+                    <span class="metric-lbl">Tardanzas Totales</span>
+                    <span class="metric-val" style="color:var(--warning);">${rateLate}%</span>
+                  </div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-icon-box" style="background-color:var(--danger-bg);color:var(--danger);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                  </div>
+                  <div class="metric-details">
+                    <span class="metric-lbl">Inasistencias Totales</span>
+                    <span class="metric-val" style="color:var(--danger);">${rateAbsent}%</span>
+                  </div>
+                </div>
+              `;
+
+              const tbody = document.getElementById('att-tbody');
+              tbody.innerHTML = filtered.length === 0
+                ? `<tr><td colspan="7" style="text-align:center;color:var(--neutral-medium);padding:24px;">No se encontraron registros con los filtros seleccionados.</td></tr>`
+                : tableRows;
+
+              document.getElementById('att-count-badge').textContent = `${filtered.length} Alumno(s)`;
+            })
+            .catch(err => {
+              console.error('Error al cargar reporte de asistencias:', err);
+              document.getElementById('att-tbody').innerHTML =
+                `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:24px;">Error de conexión con el servidor.</td></tr>`;
+            });
         }
 
-        // Cargar desde la BD al abrir la pestaña
-        fetch(getApiUrl('public/api/asistencia.php?tipo=resumen'), {
-          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-          cache: 'no-store'
-        })
-          .then(r => r.json())
-          .then(res => {
-            attData = (res.success && Array.isArray(res.data)) ? res.data : [];
-            renderAttendanceTable();
-          })
-          .catch(() => {
-            document.getElementById('att-tbody').innerHTML =
-              `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:24px;">Error de conexión con el servidor.</td></tr>`;
-          });
-
-        searchInput.addEventListener('input',  renderAttendanceTable);
-        levelSelect.addEventListener('change', renderAttendanceTable);
-        gradeSelect.addEventListener('change', renderAttendanceTable);
-        rangeSelect.addEventListener('change', renderAttendanceTable);
+        searchInput.addEventListener('input', fetchAttendanceReport);
+        levelSelect.addEventListener('change', fetchAttendanceReport);
+        gradeSelect.addEventListener('change', fetchAttendanceReport);
+        rangeSelect.addEventListener('change', fetchAttendanceReport);
 
       } 
       else if (tabName === 'filters') {
@@ -1395,7 +1437,7 @@
                 Exportar Reporte
               </button>
             </div>
-            <div id="export-success-indicator" class="badge badge-success" style="display:none; margin-bottom: 16px; width: 100%; text-align: center; padding: 8px;">¡Reporte exportado exitosamente en formato CSV! (Descarga simulada)</div>
+            <div id="export-success-indicator" class="badge badge-success" style="display:none; margin-bottom: 16px; width: 100%; text-align: center; padding: 8px;">¡Reporte exportado exitosamente en formato CSV!</div>
             
             <div class="form-layout" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 0;">
               <div class="form-group" style="margin: 0;">
@@ -1407,6 +1449,7 @@
                 <select id="filter-level" class="control-select">
                   <option value="todos">Todos los Niveles</option>
                   <option value="Primaria">Primaria</option>
+                  <option value="Secundaria">Secundaria</option>
                   <option value="Inicial">Inicial</option>
                 </select>
               </div>
@@ -1414,8 +1457,6 @@
                 <label class="form-label-desc" style="font-weight:600; margin-bottom: 6px;">Grado Escolar:</label>
                 <select id="filter-grade" class="control-select">
                   <option value="todos">Todos los Grados</option>
-                  <option value="5to Primaria">5to Primaria</option>
-                  <option value="5 años - Inicial">5 años - Inicial</option>
                 </select>
               </div>
               <div class="form-group" style="margin: 0;">
@@ -1456,124 +1497,129 @@
                   </tr>
                 </thead>
                 <tbody id="filter-table-body">
-                  <!-- Dynamically filtered rows -->
+                  <tr><td colspan="7" style="text-align:center; padding:24px; color:var(--neutral-medium);">Cargando consolidado desde la BD...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
         `;
 
-        const filterSearch = document.getElementById('filter-search');
-        const filterLevel = document.getElementById('filter-level');
-        const filterGrade = document.getElementById('filter-grade');
+        const filterSearch      = document.getElementById('filter-search');
+        const filterLevel       = document.getElementById('filter-level');
+        const filterGrade       = document.getElementById('filter-grade');
         const filterPerformance = document.getElementById('filter-performance');
-        const filterAttendance = document.getElementById('filter-attendance');
-        const filterTableBody = document.getElementById('filter-table-body');
-        const countBadge = document.getElementById('filter-result-count');
-        const btnExport = document.getElementById('btn-export-csv');
+        const filterAttendance  = document.getElementById('filter-attendance');
+        const filterTableBody   = document.getElementById('filter-table-body');
+        const countBadge        = document.getElementById('filter-result-count');
+        const btnExport         = document.getElementById('btn-export-csv');
 
-        function applyFilters() {
-          const query = filterSearch.value.trim().toLowerCase();
-          const levelVal = filterLevel.value;
-          const gradeVal = filterGrade.value;
-          const perfVal = filterPerformance.value;
-          const attVal = filterAttendance.value;
-          const students = db.students;
+        let lastFilteredDataset = [];
 
-          let filtered = students.filter(s => {
-            // 1. Text filter
-            const matchesText = s.name.toLowerCase().includes(query) || s.id.toLowerCase().includes(query);
-            
-            // 2. Level filter
-            const matchesLevel = levelVal === 'todos' || s.nivel === levelVal;
+        loadFilterOptions(filterLevel, filterGrade, function() {
+          fetchConsolidadoReport();
+        });
 
-            // 3. Grade filter
-            const matchesGrade = gradeVal === 'todos' || s.grado === gradeVal;
-            
-            // 4. Performance filter
-            const mat = s.grades.matematica || 0;
-            const com = s.grades.comunicacion || 0;
-            const cie = s.grades.ciencia || 0;
-            const avg = (mat + com + cie) / 3;
-            
-            let matchesPerf = true;
-            if (perfVal === 'aprobado') matchesPerf = avg >= 11;
-            if (perfVal === 'desaprobado') matchesPerf = avg < 11;
+        function fetchConsolidadoReport() {
+          const q    = encodeURIComponent(filterSearch.value.trim());
+          const lev  = encodeURIComponent(filterLevel.value);
+          const grd  = encodeURIComponent(filterGrade.value);
+          const perf = encodeURIComponent(filterPerformance.value);
+          const att  = encodeURIComponent(filterAttendance.value);
 
-            // 5. Attendance filter
-            let p = 0, total = 0;
-            Object.values(s.attendance).forEach(st => {
-              if (st === 'P') p++;
-              total++;
+          const url = getApiUrl(`public/api/reportes.php?tipo=consolidado&search=${q}&nivel=${lev}&grado=${grd}&rendimiento=${perf}&asistencia=${att}`);
+
+          fetch(url, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            cache: 'no-store'
+          })
+            .then(r => r.json())
+            .then(res => {
+              if (!res.success || !res.data) {
+                filterTableBody.innerHTML =
+                  `<tr><td colspan="7" style="text-align:center; color: var(--danger); padding:24px;">No se pudo cargar la lista consolidada de la BD.</td></tr>`;
+                return;
+              }
+
+              lastFilteredDataset = res.data.alumnos || [];
+
+              if (lastFilteredDataset.length === 0) {
+                filterTableBody.innerHTML =
+                  `<tr><td colspan="7" style="text-align:center; color: var(--neutral-medium); padding: 24px;">No se encontraron alumnos con los filtros combinados seleccionados.</td></tr>`;
+                countBadge.textContent = '0 Alumno(s)';
+                return;
+              }
+
+              let rowsHtml = '';
+              lastFilteredDataset.forEach(s => {
+                const average   = parseFloat(s.promedio) || 0;
+                const isPassing = average >= 11;
+                const attInfo   = s.asistencia || {};
+                const attRate   = parseFloat(attInfo.pct_asistencia) || 100;
+                const attColor  = attRate < 80 ? 'color: var(--danger); font-weight: 700;' : 'color: var(--success);';
+
+                rowsHtml += `
+                  <tr>
+                    <td style="font-weight:600;">${s.cod_alumno}</td>
+                    <td>${s.nombre_completo}</td>
+                    <td>${s.nombre_grado}${s.seccion ? ' ' + s.seccion : ''}</td>
+                    <td>${s.nivel}</td>
+                    <td style="text-align: center; font-weight:700; color: ${isPassing ? 'var(--success)' : 'var(--danger)'};">${average > 0 ? average : '-'}</td>
+                    <td style="text-align: center; ${attColor}">${attRate}%</td>
+                    <td>
+                      <span class="badge ${isPassing ? 'badge-success' : 'badge-danger'}">
+                        ${isPassing ? 'Aprobado' : 'En Alerta'}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              });
+
+              filterTableBody.innerHTML = rowsHtml;
+              countBadge.textContent = `${lastFilteredDataset.length} Alumno(s)`;
+            })
+            .catch(err => {
+              console.error('Error al cargar reporte consolidado:', err);
+              filterTableBody.innerHTML =
+                `<tr><td colspan="7" style="text-align:center; color: var(--danger); padding:24px;">Error de conexión con el servidor.</td></tr>`;
             });
-            const attRate = total > 0 ? (p / total) * 100 : 100;
-            
-            let matchesAtt = true;
-            if (attVal === 'regular') matchesAtt = attRate >= 80;
-            if (attVal === 'critico') matchesAtt = attRate < 80;
-
-            return matchesText && matchesLevel && matchesGrade && matchesPerf && matchesAtt;
-          });
-
-          // Draw Rows
-          let rowsHtml = '';
-          filtered.forEach(s => {
-            const mat = s.grades.matematica || 0;
-            const com = s.grades.comunicacion || 0;
-            const cie = s.grades.ciencia || 0;
-            const average = parseFloat(((mat + com + cie) / 3).toFixed(1));
-            const isPassing = average >= 11;
-
-            let p = 0, total = 0;
-            Object.values(s.attendance).forEach(status => {
-              if (status === 'P') p++;
-              total++;
-            });
-            const attRate = total > 0 ? Math.round((p / total) * 100) : 100;
-            const attColor = attRate < 80 ? 'color: var(--danger); font-weight: 700;' : 'color: var(--success);';
-
-            rowsHtml += `
-              <tr>
-                <td style="font-weight:600;">${s.id}</td>
-                <td>${s.name}</td>
-                <td>${s.grado}</td>
-                <td>${s.nivel}</td>
-                <td style="text-align: center; font-weight:700; color: ${isPassing ? 'var(--success)' : 'var(--danger)'};">${average}</td>
-                <td style="text-align: center; ${attColor}">${attRate}%</td>
-                <td>
-                  <span class="badge ${isPassing ? 'badge-success' : 'badge-danger'}">
-                    ${isPassing ? 'Aprobado' : 'En Alerta'}
-                  </span>
-                </td>
-              </tr>
-            `;
-          });
-
-          if (filtered.length === 0) {
-            rowsHtml = `<tr><td colspan="7" style="text-align:center; color: var(--neutral-medium); padding: 24px;">No se encontraron alumnos con los filtros combinados seleccionados.</td></tr>`;
-          }
-
-          filterTableBody.innerHTML = rowsHtml;
-          countBadge.textContent = `${filtered.length} Alumno(s)`;
         }
 
-        // Attach event listeners
-        filterSearch.addEventListener('input', applyFilters);
-        filterLevel.addEventListener('change', applyFilters);
-        filterGrade.addEventListener('change', applyFilters);
-        filterPerformance.addEventListener('change', applyFilters);
-        filterAttendance.addEventListener('change', applyFilters);
+        filterSearch.addEventListener('input', fetchConsolidadoReport);
+        filterLevel.addEventListener('change', fetchConsolidadoReport);
+        filterGrade.addEventListener('change', fetchConsolidadoReport);
+        filterPerformance.addEventListener('change', fetchConsolidadoReport);
+        filterAttendance.addEventListener('change', fetchConsolidadoReport);
 
         btnExport.addEventListener('click', function() {
+          if (lastFilteredDataset.length === 0) {
+            alert('No hay datos para exportar con los filtros actuales.');
+            return;
+          }
+
+          let csvContent = 'data:text/csv;charset=utf-8,';
+          csvContent += 'Codigo,Apellidos y Nombres,Grado,Nivel,Promedio General,Tasa Asistencia,Estado\n';
+
+          lastFilteredDataset.forEach(s => {
+            const avg = parseFloat(s.promedio) || 0;
+            const att = s.asistencia ? (s.asistencia.pct_asistencia || 100) : 100;
+            const est = avg >= 11 ? 'Aprobado' : 'En Alerta';
+            csvContent += `"${s.cod_alumno}","${s.nombre_completo}","${s.nombre_grado}","${s.nivel}",${avg},${att}%,${est}\n`;
+          });
+
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement('a');
+          link.setAttribute('href', encodedUri);
+          link.setAttribute('download', `Reporte_Alumnos_IEP_Corazon_de_Jesus_${new Date().toISOString().slice(0,10)}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
           const indicator = document.getElementById('export-success-indicator');
           if (indicator) {
             indicator.style.display = 'block';
             setTimeout(() => { indicator.style.display = 'none'; }, 4000);
           }
         });
-
-        // Run initially
-        applyFilters();
       }
     }
   }
