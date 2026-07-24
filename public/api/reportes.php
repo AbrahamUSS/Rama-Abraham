@@ -34,6 +34,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     exit;
 }
 
+// Iniciar sesión para obtener datos del usuario logueado
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 try {
     $method  = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $query   = $_GET;
@@ -51,8 +56,14 @@ try {
         $payload = array_merge($_POST, $payload);
     }
 
+    // Datos de sesión para filtrar por rol
+    $sessionData = [
+        'usuario_id'  => $_SESSION['usuario_id'] ?? null,
+        'rol_nombre'  => $_SESSION['rol_nombre'] ?? ''
+    ];
+
     $controller = new ReporteController();
-    $result     = $controller->handleRequest($method, $payload, $query);
+    $result     = $controller->handleRequest($method, $payload, $query, $sessionData);
     responseJson($result['success'], $result['message'], $result['data']);
 } catch (Throwable $e) {
     http_response_code(500);

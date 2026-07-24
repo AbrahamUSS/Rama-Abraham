@@ -193,10 +193,11 @@ class AsistenciaModel
      * Devuelve un resumen de asistencias (P, T, F) agrupado por alumno.
      * Útil para el módulo de Reportes de Asistencias.
      *
-     * @param array $filtros  Soporta: 'fecha_inicio', 'fecha_fin', 'id_alumno'
+     * @param array $filtros     Soporta: 'fecha_inicio', 'fecha_fin', 'id_alumno'
+     * @param int|null $idDocente  Si no es null, filtra solo alumnos de grados del docente
      * @return array
      */
-    public function getResumenPorAlumno(array $filtros = []): array
+    public function getResumenPorAlumno(array $filtros = [], ?int $idDocente = null): array
     {
         $where  = ['1=1'];
         $params = [];
@@ -218,6 +219,27 @@ class AsistenciaModel
             $params[] = $idAlumno;
         }
 
+        // Filtrar por grados del docente si aplica
+        if ($idDocente !== null) {
+            $stmtGrados = $this->pdo->prepare("
+                SELECT DISTINCT gc.id_grado
+                FROM ASIGNACION_CURSO ac
+                INNER JOIN GRADO_CURSO gc ON gc.id_gradoCurso = ac.id_gradoCurso
+                WHERE ac.id_docente = ?
+            ");
+            $stmtGrados->execute([$idDocente]);
+            $gradosDocente = array_column($stmtGrados->fetchAll(PDO::FETCH_ASSOC), 'id_grado');
+
+            if (!empty($gradosDocente)) {
+                $placeholders = implode(',', array_fill(0, count($gradosDocente), '?'));
+                $where[] = "al.id_grado IN ($placeholders)";
+                $params = array_merge($params, $gradosDocente);
+            } else {
+                // Si el docente no tiene grados asignados, retornar vacío
+                return [];
+            }
+        }
+
         $whereStr = implode(' AND ', $where);
 
         $stmt = $this->pdo->prepare(
@@ -233,9 +255,9 @@ class AsistenciaModel
             "ROUND(100.0 * SUM(CASE WHEN a.tipo = 'P' THEN 1 ELSE 0 END) " .
             "  / NULLIF(COUNT(a.id_asistencia), 0), 1) AS pct_asistencia " .
             "FROM ASISTENCIA a " .
-            "LEFT JOIN alumnos al ON al.id_alumno = a.id_alumno " .
-            "LEFT JOIN personas p ON p.id_persona = al.id_persona " .
-            "LEFT JOIN grado g ON g.id_grado = al.id_grado " .
+            "INNER JOIN alumnos al ON al.id_alumno = a.id_alumno " .
+            "INNER JOIN personas p ON p.id_persona = al.id_persona " .
+            "INNER JOIN grado g ON g.id_grado = al.id_grado " .
             "WHERE {$whereStr} " .
             "GROUP BY a.id_alumno " .
             "ORDER BY nombre_completo ASC"

@@ -3,6 +3,10 @@
  * =====================================================================
  * MODELO: ReporteModel.php
  * Procesa consultas consolidadas de notas y asistencias directamente de la BD MySQL.
+ *
+ * Cuando se recibe un $idDocente (rol docente), las consultas se limitan
+ * a los alumnos de los grados/cursos asignados al docente vía ASIGNACION_CURSO.
+ * Cuando $idDocente es null (rol director/admin), se muestran todos los registros.
  * =====================================================================
  */
 
@@ -16,15 +20,64 @@ class ReporteModel
     }
 
     /**
-     * Obtiene los niveles y grados disponibles en la BD para popular filtros dinámicos.
+     * Obtiene los ids de grado donde el docente tiene cursos asignados.
+     * Útil para filtrar alumnos y opciones de filtro.
      */
-    public function getFiltrosOpciones(): array
+    private function getGradosDelDocente(int $idDocente): array
     {
-        $stmtGrados = $this->pdo->query("
-            SELECT DISTINCT id_grado, nombre, seccion, turno 
-            FROM GRADO 
-            ORDER BY nombre, seccion
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT gc.id_grado
+            FROM ASIGNACION_CURSO ac
+            INNER JOIN GRADO_CURSO gc ON gc.id_gradoCurso = ac.id_gradoCurso
+            WHERE ac.id_docente = ?
         ");
+        $stmt->execute([$idDocente]);
+        return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'id_grado');
+    }
+
+    /**
+     * Obtiene los ids de gradoCurso asignados al docente.
+     * Útil para filtrar cursos y notas.
+     */
+    private function getGradoCursosDelDocente(int $idDocente): array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT ac.id_gradoCurso
+            FROM ASIGNACION_CURSO ac
+            WHERE ac.id_docente = ?
+        ");
+        $stmt->execute([$idDocente]);
+        return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'id_gradoCurso');
+    }
+
+    /**
+     * Obtiene los niveles y grados disponibles en la BD para popular filtros dinámicos.
+     * Si $idDocente no es null, solo devuelve los grados donde el docente enseña.
+     */
+    public function getFiltrosOpciones(?int $idDocente = null): array
+    {
+        if ($idDocente !== null) {
+            // Solo grados del docente
+            $gradosDocente = $this->getGradosDelDocente($idDocente);
+            if (empty($gradosDocente)) {
+                return ['niveles' => [], 'grados' => []];
+            }
+            $placeholders = implode(',', array_fill(0, count($gradosDocente), '?'));
+            $stmtGrados = $this->pdo->prepare("
+                SELECT DISTINCT id_grado, nombre, seccion, turno 
+                FROM GRADO 
+                WHERE id_grado IN ($placeholders)
+                ORDER BY nombre, seccion
+            ");
+            $stmtGrados->execute($gradosDocente);
+        } else {
+            // Director/admin: todos los grados
+            $stmtGrados = $this->pdo->query("
+                SELECT DISTINCT id_grado, nombre, seccion, turno 
+                FROM GRADO 
+                ORDER BY nombre, seccion
+            ");
+        }
         $grados = $stmtGrados->fetchAll(PDO::FETCH_ASSOC);
 
         $nivelesSet = [];
@@ -56,52 +109,132 @@ class ReporteModel
 
     /**
      * Obtiene el reporte completo de notas por alumno y por asignatura desde la BD.
+     * Si $idDocente no es null, solo muestra cursos y alumnos vinculados al docente.
      */
-    public function getReporteNotas(array $filtros = []): array
+    public function getReporteNotas(array $filtros = [], ?int $idDocente = null): array
     {
-        // 1. Cursos disponibles
-        $cursosStmt = $this->pdo->query("SELECT id_curso, nombre FROM CURSO ORDER BY id_curso ASC");
+        // 1. Cursos disponibles (filtrados por docente si aplica)
+        if ($idDocente !== null) {
+            $gradoCursosDocente = $this->getGradoCursosDelDocente($idDocente);
+            if (empty($gradoCursosDocente)) {
+                return [
+                    'cursos'  => [],
+                    'alumnos' => [],
+                    'metricas' => [
+                        'promedio_general' => 0,
+                        'tasa_aprobacion'  => 100,
+                        'destacado_nombre' => 'Ninguno',
+                        'destacado_nota'   => '-'
+                    ],
+                    'promedios_asignatura' => []
+                ];
+            }
+
+            // Cursos que enseña el docente
+            $placeholders = implode(',', array_fill(0, count($gradoCursosDocente), '?'));
+            $cursosStmt = $this->pdo->prepare("
+                SELECT DISTINCT c.id_curso, c.nombre 
+                FROM CURSO c
+                INNER JOIN GRADO_CURSO gc ON gc.id_curso = c.id_curso
+                WHERE gc.id_gradoCurso IN ($placeholders)
+                ORDER BY c.id_curso ASC
+            ");
+            $cursosStmt->execute($gradoCursosDocente);
+
+            // Grados donde enseña el docente (para filtrar alumnos)
+            $gradosDocente = $this->getGradosDelDocente($idDocente);
+        } else {
+            $cursosStmt = $this->pdo->query("SELECT id_curso, nombre FROM CURSO ORDER BY id_curso ASC");
+            $gradosDocente = null;
+        }
         $cursos = $cursosStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 2. Alumnos base
-        $sqlAlumnos = "
-            SELECT 
-                al.id_alumno,
-                al.cod_alumn AS cod_alumno,
-                CONCAT(p.ap_paterno, ' ', p.ap_materno, ', ', p.nombre) AS nombre_completo,
-                p.nombre,
-                p.ap_paterno,
-                p.ap_materno,
-                g.id_grado,
-                g.nombre AS nombre_grado,
-                g.seccion,
-                CASE 
-                    WHEN g.nombre LIKE '%Primaria%' THEN 'Primaria' 
-                    WHEN g.nombre LIKE '%Secundaria%' THEN 'Secundaria' 
-                    ELSE 'Inicial' 
-                END AS nivel
-            FROM ALUMNOS al
-            INNER JOIN PERSONAS p ON p.id_persona = al.id_persona
-            INNER JOIN GRADO g ON g.id_grado = al.id_grado
-            ORDER BY p.ap_paterno, p.ap_materno, p.nombre
-        ";
-        $alumnosStmt = $this->pdo->query($sqlAlumnos);
+        // 2. Alumnos base (filtrados por grados del docente si aplica)
+        if ($gradosDocente !== null && !empty($gradosDocente)) {
+            $placeholdersG = implode(',', array_fill(0, count($gradosDocente), '?'));
+            $sqlAlumnos = "
+                SELECT 
+                    al.id_alumno,
+                    al.cod_alumn AS cod_alumno,
+                    CONCAT(p.ap_paterno, ' ', p.ap_materno, ', ', p.nombre) AS nombre_completo,
+                    p.nombre,
+                    p.ap_paterno,
+                    p.ap_materno,
+                    g.id_grado,
+                    g.nombre AS nombre_grado,
+                    g.seccion,
+                    CASE 
+                        WHEN g.nombre LIKE '%Primaria%' THEN 'Primaria' 
+                        WHEN g.nombre LIKE '%Secundaria%' THEN 'Secundaria' 
+                        ELSE 'Inicial' 
+                    END AS nivel
+                FROM ALUMNOS al
+                INNER JOIN PERSONAS p ON p.id_persona = al.id_persona
+                INNER JOIN GRADO g ON g.id_grado = al.id_grado
+                WHERE al.id_grado IN ($placeholdersG)
+                ORDER BY p.ap_paterno, p.ap_materno, p.nombre
+            ";
+            $alumnosStmt = $this->pdo->prepare($sqlAlumnos);
+            $alumnosStmt->execute($gradosDocente);
+        } else {
+            $sqlAlumnos = "
+                SELECT 
+                    al.id_alumno,
+                    al.cod_alumn AS cod_alumno,
+                    CONCAT(p.ap_paterno, ' ', p.ap_materno, ', ', p.nombre) AS nombre_completo,
+                    p.nombre,
+                    p.ap_paterno,
+                    p.ap_materno,
+                    g.id_grado,
+                    g.nombre AS nombre_grado,
+                    g.seccion,
+                    CASE 
+                        WHEN g.nombre LIKE '%Primaria%' THEN 'Primaria' 
+                        WHEN g.nombre LIKE '%Secundaria%' THEN 'Secundaria' 
+                        ELSE 'Inicial' 
+                    END AS nivel
+                FROM ALUMNOS al
+                INNER JOIN PERSONAS p ON p.id_persona = al.id_persona
+                INNER JOIN GRADO g ON g.id_grado = al.id_grado
+                ORDER BY p.ap_paterno, p.ap_materno, p.nombre
+            ";
+            $alumnosStmt = $this->pdo->query($sqlAlumnos);
+        }
         $alumnosRaw = $alumnosStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 3. Promedio por curso para cada alumno
-        $sqlNotas = "
-            SELECT 
-                n.id_alumno,
-                c.id_curso,
-                c.nombre AS nombre_curso,
-                ROUND(AVG(n.nota), 1) AS promedio_curso
-            FROM NOTAS n
-            INNER JOIN ACTIVIDADES act ON act.id_actividad = n.id_actividad
-            INNER JOIN GRADO_CURSO gc ON gc.id_gradoCurso = act.id_gradoCurso
-            INNER JOIN CURSO c ON c.id_curso = gc.id_curso
-            GROUP BY n.id_alumno, c.id_curso
-        ";
-        $notasStmt = $this->pdo->query($sqlNotas);
+        // 3. Promedio por curso para cada alumno (filtrado por gradoCursos del docente si aplica)
+        if ($idDocente !== null && !empty($gradoCursosDocente)) {
+            $placeholdersGC = implode(',', array_fill(0, count($gradoCursosDocente), '?'));
+            $sqlNotas = "
+                SELECT 
+                    n.id_alumno,
+                    c.id_curso,
+                    c.nombre AS nombre_curso,
+                    ROUND(AVG(n.nota), 1) AS promedio_curso
+                FROM NOTAS n
+                INNER JOIN ACTIVIDADES act ON act.id_actividad = n.id_actividad
+                INNER JOIN GRADO_CURSO gc ON gc.id_gradoCurso = act.id_gradoCurso
+                INNER JOIN CURSO c ON c.id_curso = gc.id_curso
+                WHERE gc.id_gradoCurso IN ($placeholdersGC)
+                GROUP BY n.id_alumno, c.id_curso
+            ";
+            $notasStmt = $this->pdo->prepare($sqlNotas);
+            $notasStmt->execute($gradoCursosDocente);
+        } else {
+            $sqlNotas = "
+                SELECT 
+                    n.id_alumno,
+                    c.id_curso,
+                    c.nombre AS nombre_curso,
+                    ROUND(AVG(n.nota), 1) AS promedio_curso
+                FROM NOTAS n
+                INNER JOIN ACTIVIDADES act ON act.id_actividad = n.id_actividad
+                INNER JOIN GRADO_CURSO gc ON gc.id_gradoCurso = act.id_gradoCurso
+                INNER JOIN CURSO c ON c.id_curso = gc.id_curso
+                GROUP BY n.id_alumno, c.id_curso
+            ";
+            $notasStmt = $this->pdo->query($sqlNotas);
+        }
         $notasRaw = $notasStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $notasMap = [];
@@ -235,26 +368,37 @@ class ReporteModel
 
     /**
      * Obtiene reporte consolidado de Notas + Asistencias para la pestaña de "Alumnos con Filtros".
+     * Si $idDocente no es null, solo incluye alumnos de los grados del docente.
      */
-    public function getReporteConsolidado(array $filtros = []): array
+    public function getReporteConsolidado(array $filtros = [], ?int $idDocente = null): array
     {
-        $notasData = $this->getReporteNotas($filtros);
+        $notasData = $this->getReporteNotas($filtros, $idDocente);
         $alumnosNotas = $notasData['alumnos'];
 
-        // Cargar asistencias por alumno
-        $sqlAsistencia = "
-            SELECT 
-                al.id_alumno,
-                SUM(CASE WHEN a.tipo = 'P' THEN 1 ELSE 0 END) AS presentes,
-                SUM(CASE WHEN a.tipo = 'T' THEN 1 ELSE 0 END) AS tardanzas,
-                SUM(CASE WHEN a.tipo = 'F' THEN 1 ELSE 0 END) AS faltas,
-                COUNT(a.id_asistencia) AS total_dias
-            FROM ALUMNOS al
-            LEFT JOIN ASISTENCIA a ON a.id_alumno = al.id_alumno
-            GROUP BY al.id_alumno
-        ";
-        $attStmt = $this->pdo->query($sqlAsistencia);
-        $attRaw = $attStmt->fetchAll(PDO::FETCH_ASSOC);
+        // Obtener ids de alumnos ya filtrados para limitar la consulta de asistencia
+        $alumnoIds = array_column($alumnosNotas, 'id_alumno');
+
+        // Cargar asistencias por alumno (solo los alumnos ya filtrados)
+        if (!empty($alumnoIds)) {
+            $placeholders = implode(',', array_fill(0, count($alumnoIds), '?'));
+            $sqlAsistencia = "
+                SELECT 
+                    al.id_alumno,
+                    SUM(CASE WHEN a.tipo = 'P' THEN 1 ELSE 0 END) AS presentes,
+                    SUM(CASE WHEN a.tipo = 'T' THEN 1 ELSE 0 END) AS tardanzas,
+                    SUM(CASE WHEN a.tipo = 'F' THEN 1 ELSE 0 END) AS faltas,
+                    COUNT(a.id_asistencia) AS total_dias
+                FROM ALUMNOS al
+                LEFT JOIN ASISTENCIA a ON a.id_alumno = al.id_alumno
+                WHERE al.id_alumno IN ($placeholders)
+                GROUP BY al.id_alumno
+            ";
+            $attStmt = $this->pdo->prepare($sqlAsistencia);
+            $attStmt->execute($alumnoIds);
+            $attRaw = $attStmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $attRaw = [];
+        }
 
         $attMap = [];
         foreach ($attRaw as $ar) {
