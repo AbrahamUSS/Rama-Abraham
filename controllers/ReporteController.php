@@ -1,16 +1,5 @@
 <?php
-/**
- * Controlador de Reportes Generales
- *
- * Maneja las peticiones de datos de la BD para el módulo de Reportes:
- *   - Reporte de Notas
- *   - Reporte de Asistencias
- *   - Alumnos con Filtros Combinados
- *   - Opciones dinámicas de filtros (Niveles, Grados)
- *
- * Filtra automáticamente por docente cuando el usuario logueado es docente.
- * Si es director/admin, muestra todos los registros.
- */
+// Controlador de Reportes: notas, asistencia y filtros dinámicos
 
 require_once __DIR__ . '/../core/database.php';
 require_once __DIR__ . '/../models/ReporteModel.php';
@@ -29,10 +18,7 @@ class ReporteController
         $this->asistenciaModel = new AsistenciaModel($this->pdo);
     }
 
-    /**
-     * Obtiene el id_docente a partir del id_credenciales (usuario_id de la sesión).
-     * Cadena: CREDENCIALES.id_persona → DOCENTES.id_persona → id_docente
-     */
+    // Obtiene id_docente a partir del id_credenciales de sesión
     private function getIdDocenteFromSession(array $sessionData): ?int
     {
         $usuarioId = $sessionData['usuario_id'] ?? null;
@@ -54,9 +40,7 @@ class ReporteController
         return $row ? (int)$row['id_docente'] : null;
     }
 
-    /**
-     * Determina si el usuario logueado es director/admin (ve todo).
-     */
+    // Verifica si el usuario es director o administrador
     private function isDirector(array $sessionData): bool
     {
         $rol = strtolower(trim($sessionData['rol_nombre'] ?? ''));

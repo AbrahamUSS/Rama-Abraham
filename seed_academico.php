@@ -77,9 +77,7 @@ try {
 
     $conn->beginTransaction();
 
-    // -----------------------------------------------------------------
-    // 1. ROLES BASE
-    // -----------------------------------------------------------------
+    // 1. roles base
     echo "1. Creando / verificando roles base...\n";
     $rolesDefinidos = ['Director', 'Administrador', 'Docente', 'Contador'];
     $rolesIds = [];
@@ -98,9 +96,7 @@ try {
     }
     echo "   ✔ Roles listos: Director (ID {$rolesIds['Director']}), Administrador (ID {$rolesIds['Administrador']}), Docente (ID {$rolesIds['Docente']}), Contador (ID {$rolesIds['Contador']}).\n\n";
 
-    // -----------------------------------------------------------------
-    // 2. CREACIÓN DE USUARIOS BASE (DIRECTOR Y DOCENTES)
-    // -----------------------------------------------------------------
+    // 2. usuarios base
     echo "2. Registrando usuarios y personal de la institución...\n";
 
     $listaUsuarios = [
@@ -290,7 +286,7 @@ try {
         $stmt->execute([':username' => $u['username']]);
         if ($stmt->fetch()) {
             echo "   • Usuario '{$u['username']}' ya existía, omitiendo inserción de credencial.\n";
-            // Still collect IDs for later use (assignments)
+    // Recolectar IDs para uso posterior
             if ($u['tipo'] === 'docente') {
                 $stmtD = $conn->prepare("SELECT d.id_docente FROM DOCENTES d INNER JOIN PERSONAS p ON d.id_persona = p.id_persona WHERE p.dni = :dni LIMIT 1");
                 $stmtD->execute([':dni' => $u['dni']]);
@@ -302,7 +298,7 @@ try {
             continue;
         }
 
-        // Check if person already exists by DNI (idempotent re-run)
+        // Verificar persona existente por DNI
         $stmt = $conn->prepare("SELECT id_persona FROM PERSONAS WHERE dni = :dni");
         $stmt->execute([':dni' => $u['dni']]);
         $existingPersona = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -335,7 +331,7 @@ try {
             $idBuzon = $conn->lastInsertId();
         }
 
-        // Insertar en tabla de cargo específico (skip if already exists)
+        // insertar en tabla de cargo
         if ($u['tipo'] === 'administrativo') {
             $stmt = $conn->prepare("SELECT id_administrativo FROM ADMINISTRATIVO WHERE id_persona = :id");
             $stmt->execute([':id' => $idPersona]);
@@ -385,9 +381,7 @@ try {
     }
     echo "\n";
 
-    // -----------------------------------------------------------------
-    // 3. GRADOS ESCOLARES (GRADO)
-    // -----------------------------------------------------------------
+    // 3. grados escolares
     echo "3. Insertando grados académicos...\n";
     $gradosDefinidos = [
         ['nombre' => '1° Primaria',   'seccion' => 'A', 'turno' => 'Mañana'],
@@ -412,9 +406,7 @@ try {
     }
     echo "   ✔ 5 Grados registrados correctamente.\n\n";
 
-    // -----------------------------------------------------------------
-    // 4. CURSOS (CURSO)
-    // -----------------------------------------------------------------
+    // 4. cursos
     echo "4. Registrando materias y cursos académicos...\n";
     $cursosDefinidos = [
         ['nombre' => 'Matemáticas',             'descripcion' => 'Desarrollo del razonamiento lógico-matemático, álgebra y geometría.'],
@@ -442,9 +434,7 @@ try {
     }
     echo "   ✔ 8 Cursos académicos registrados.\n\n";
 
-    // -----------------------------------------------------------------
-    // 5. ASOCIACIÓN GRADO - CURSO (GRADO_CURSO)
-    // -----------------------------------------------------------------
+    // 5. grado-curso
     echo "5. Creando malla curricular Grado-Curso (Año 2026)...\n";
 
     $gradoCursoMap = []; // Key: "Grado|Curso" => id_gradoCurso
@@ -465,9 +455,7 @@ try {
     }
     echo "   ✔ Malla curricular del año 2026 generada exitosamente.\n\n";
 
-    // -----------------------------------------------------------------
-    // 6. ASIGNACIÓN DE CURSOS A DOCENTES CON HORARIOS (ASIGNACION_CURSO)
-    // -----------------------------------------------------------------
+    // 6. asignacion docentes
     echo "6. Asignando carga horaria a docentes...\n";
 
     // Asignaciones
@@ -516,15 +504,13 @@ try {
     }
     echo "   ✔ Carga horaria de profesores asignada.\n\n";
 
-    // -----------------------------------------------------------------
-    // 7. SESIONES Y ACTIVIDADES EVALUATIVAS (SESION, ACTIVIDADES)
-    // -----------------------------------------------------------------
+    // 7. sesiones y actividades
     echo "7. Registrando sesiones de clase y actividades evaluativas...\n";
 
     $gcMat1Sec = $gradoCursoMap['1° Secundaria|Matemáticas'] ?? null;
     $actividadesIds = [];
 
-    // Crear actividades para todos los cursos de GRADO_CURSO
+    // crear actividades por curso
     $gcStmt = $conn->query("SELECT id_gradoCurso, id_curso FROM GRADO_CURSO");
     $gcList = $gcStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -552,9 +538,7 @@ try {
     }
     echo "   ✔ Sesiones de aprendizaje y rúbricas de evaluación creadas para todos los cursos.\n\n";
 
-    // -----------------------------------------------------------------
-    // 8. APODERADOS Y ALUMNOS (APODERADO, ALUMNOS)
-    // -----------------------------------------------------------------
+    // 8. apoderados y alumnos
     echo "8. Insertando alumnos y apoderados de prueba...\n";
 
     // Crear Apoderado de Prueba
@@ -608,9 +592,7 @@ try {
     $todosAlumnos = $conn->query("SELECT id_alumno, id_grado FROM ALUMNOS")->fetchAll(PDO::FETCH_ASSOC);
     echo "   ✔ " . count($todosAlumnos) . " Alumnos matriculados en la institución.\n\n";
 
-    // -----------------------------------------------------------------
-    // 9. NOTAS Y ASISTENCIA (NOTAS, ASISTENCIA)
-    // -----------------------------------------------------------------
+    // 9. notas y asistencia
     echo "9. Calificando actividades y registrando asistencias para la institución...\n";
 
     $matrizNotas = [
@@ -635,7 +617,7 @@ try {
 
         $notasBase = $matrizNotas[$codAlu] ?? [14.0, 15.0, 14.5];
 
-        // Buscar actividades asociadas al grado del alumno
+        // buscar actividades del grado
         $stmtAct = $conn->prepare("
             SELECT act.id_actividad 
             FROM ACTIVIDADES act 
@@ -673,9 +655,7 @@ try {
     }
     echo "   ✔ Registros de notas y asistencias procesados exitosamente.\n\n";
 
-    // -----------------------------------------------------------------
-    // FIN Y CONFIRMACIÓN DE TRANSACCIÓN
-    // -----------------------------------------------------------------
+    // fin
     $conn->commit();
 
     echo "=============================================================\n";

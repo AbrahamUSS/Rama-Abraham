@@ -1,4 +1,4 @@
-/* Global Reset & Core Styles */
+/* Reset global */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -34,14 +34,14 @@ button {
   outline: none;
 }
 
-/* Page Layout Shell */
+/* Layout */
 #app-layout {
   display: flex;
   min-height: 100vh;
   position: relative;
 }
 
-/* Sidebar Styling */
+/* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
   background-color: var(--primary-dark);
@@ -140,7 +140,7 @@ button {
   white-space: nowrap;
 }
 
-/* Collapsed Sidebar on Desktop */
+/* Sidebar colapsado */
 #app-layout.collapsed .sidebar {
   width: var(--sidebar-collapsed-width);
 }
@@ -164,7 +164,7 @@ button {
   padding: 12px;
 }
 
-/* Main Layout Wrapper */
+/* Wrapper principal */
 .main-wrapper {
   flex-grow: 1;
   margin-left: var(--sidebar-width);
@@ -178,7 +178,7 @@ button {
   margin-left: var(--sidebar-collapsed-width);
 }
 
-/* Top Header Navbar */
+/* Navbar */
 .top-navbar {
   height: var(--header-height);
   background-color: var(--white);
@@ -229,7 +229,7 @@ button {
   gap: 20px;
 }
 
-/* Notification Bell */
+/* Notificaciones */
 .notification-bell {
   position: relative;
   padding: 8px;
@@ -269,7 +269,7 @@ button {
   padding: 0 3px;
 }
 
-/* User Profile Badge */
+/* Perfil usuario */
 .user-profile {
   display: flex;
   align-items: center;
@@ -335,7 +335,7 @@ button {
   fill: none;
 }
 
-/* Content Container Area */
+/* Contenido */
 .main-content {
   flex-grow: 1;
   padding: 24px;
@@ -350,7 +350,7 @@ button {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Mobile responsive hamburger settings */
+/* Hamburguesa móvil */
 .mobile-hamburger {
   display: none;
   cursor: pointer;
@@ -366,7 +366,7 @@ button {
   stroke-width: 2.2;
 }
 
-/* Overlay for mobile active sidebar */
+/* Overlay móvil */
 .sidebar-overlay {
   display: none;
   position: fixed;
@@ -379,7 +379,7 @@ button {
   animation: fadeIn 0.2s ease-out;
 }
 
-/* Mobile Media Queries */
+/* Media queries */
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);

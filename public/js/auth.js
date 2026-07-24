@@ -1,38 +1,12 @@
-/**
- * =====================================================================
- * AUTH.JS - Módulo de Autenticación del Sistema
- * IEP Corazón de Jesús
- * =====================================================================
- * 
- * Este archivo maneja:
- *  1. window.SchoolAuth - Utilidades de sesión, guardia y logout
- *  2. Formulario de login (AJAX) - Solo se ejecuta si jQuery y el form existen
- *  3. Funciones auxiliares de alertas y errores de formulario
- */
+// Módulo de autenticación - Login, sesión y recuperación de contraseña
 
-// =====================================================================
-// 1. UTILIDADES DE SESIÓN (Sin dependencia de jQuery)
-// =====================================================================
 window.SchoolAuth = {
-    /**
-     * Retorna los datos de la sesión actual inyectados desde PHP
-     * via window.currentSession en las vistas admin.php y docente.php
-     */
     getSession: function() {
         return window.currentSession || null;
     },
-
-    /**
-     * Guardia de seguridad del lado del cliente.
-     * La protección real se ejecuta en el servidor con Security::verificarRol().
-     */
     checkGuard: function(requiredRole) {
-        // La protección principal se ejecuta en el servidor mediante Security::verificarRol()
+        // La protección se ejecuta en el servidor con Security::verificarRol()
     },
-
-    /**
-     * Cierra la sesión redirigiendo al endpoint de logout del servidor.
-     */
     logout: function() {
         var url = (typeof BASE_URL !== 'undefined' && BASE_URL) ? BASE_URL : '/';
         if (!url.endsWith('/')) {
@@ -42,26 +16,19 @@ window.SchoolAuth = {
     }
 };
 
-// =====================================================================
-// 2. FORMULARIO DE LOGIN (Solo se ejecuta si jQuery y el formulario existen)
-// =====================================================================
+// Formulario de login (AJAX)
 if (typeof jQuery !== 'undefined') {
     jQuery(document).ready(function($) {
         var $loginForm = $('#login-form');
-
-        // Solo adjuntar el handler si el formulario existe en la página actual
         if ($loginForm.length > 0) {
             $loginForm.on('submit', function(e) {
                 e.preventDefault();
-
                 var $btn = $('#btn-login');
                 var $btnText = $btn.find('.btn-text');
                 var $btnLoading = $btn.find('.btn-loading');
-
                 $btnText.hide();
                 $btnLoading.show();
                 $btn.prop('disabled', true);
-
                 $.ajax({
                     url: BASE_URL + 'auth/login',
                     type: 'POST',
@@ -70,9 +37,7 @@ if (typeof jQuery !== 'undefined') {
                     success: function(response) {
                         if (response.success) {
                             mostrarAlertaLogin('success', response.mensaje);
-                            setTimeout(function() {
-                                window.location.href = response.redirect;
-                            }, 1000);
+                            setTimeout(function() { window.location.href = response.redirect; }, 1000);
                         } else {
                             mostrarAlertaLogin('error', response.mensaje);
                             $btnText.show();
@@ -92,21 +57,16 @@ if (typeof jQuery !== 'undefined') {
     });
 }
 
-// =====================================================================
-// 3. FUNCIONES AUXILIARES DE ALERTAS
-// =====================================================================
-
+// Funciones auxiliares de alertas
 function mostrarAlertaLogin(tipo, mensaje) {
     var $alert = document.getElementById('login-alert-box');
     if (!$alert) return;
-
     $alert.className = '';
     $alert.style.padding = '10px 15px';
     $alert.style.marginBottom = '15px';
     $alert.style.borderRadius = '6px';
     $alert.style.fontSize = '14px';
     $alert.style.display = 'block';
-
     if (tipo === 'success') {
         $alert.style.backgroundColor = '#d4edda';
         $alert.style.color = '#155724';
@@ -116,22 +76,17 @@ function mostrarAlertaLogin(tipo, mensaje) {
         $alert.style.color = '#721c24';
         $alert.style.border = '1px solid #f5c6cb';
     }
-
     $alert.innerHTML = mensaje;
 }
 
 function mostrarAlertaForm(tipo, mensaje) {
     var $alert = document.getElementById('form-alert');
     if (!$alert) return;
-
     $alert.className = 'alert alert-' + tipo;
     $alert.innerHTML = mensaje;
     $alert.style.display = 'block';
-
     if (tipo === 'success') {
-        setTimeout(function() {
-            $alert.style.display = 'none';
-        }, 5000);
+        setTimeout(function() { $alert.style.display = 'none'; }, 5000);
     }
 }
 
@@ -146,9 +101,7 @@ function mostrarErrores(errores) {
     }
 }
 
-// =====================================================================
-// 4. RECUPERACIÓN DE CONTRASEÑA
-// =====================================================================
+// Recuperación de contraseña (dos pasos: verificar identidad → nueva contraseña)
 if (typeof jQuery !== 'undefined') {
     jQuery(document).ready(function($) {
         var $showRecovery = $('#show-recovery');
@@ -174,19 +127,17 @@ if (typeof jQuery !== 'undefined') {
 
         $recoveryForm.on('submit', function(e) {
             e.preventDefault();
-
             var $btn = $('#btn-recovery');
             var $btnText = $btn.find('.btn-text');
             var $btnLoading = $btn.find('.btn-loading');
-
             var csrfToken = '';
             var csrfInput = $('input[name="csrf_token"]').first();
             if (csrfInput.length) csrfToken = csrfInput.val();
 
             if ($step2.is(':visible')) {
+                // Paso 2: guardar nueva contraseña
                 var nueva = $('#recovery-new-pass').val();
                 var confirmar = $('#recovery-confirm-pass').val();
-
                 if (!nueva || !confirmar) {
                     mostrarAlertaRecovery('error', 'Complete ambos campos de contraseña.');
                     return;
@@ -199,11 +150,9 @@ if (typeof jQuery !== 'undefined') {
                     mostrarAlertaRecovery('error', 'Las contraseñas no coinciden.');
                     return;
                 }
-
                 $btnText.hide();
                 $btnLoading.text('Guardando...').show();
                 $btn.prop('disabled', true);
-
                 $.ajax({
                     url: BASE_URL + 'auth/recuperarPassword',
                     type: 'POST',
@@ -219,7 +168,6 @@ if (typeof jQuery !== 'undefined') {
                         $btnText.show();
                         $btnLoading.hide();
                         $btn.prop('disabled', false);
-
                         if (response.success) {
                             mostrarAlertaRecovery('success', '¡Contraseña actualizada! Será redirigido al login en 3 segundos.');
                             setTimeout(function() {
@@ -241,18 +189,16 @@ if (typeof jQuery !== 'undefined') {
                     }
                 });
             } else {
+                // Paso 1: verificar identidad (DNI + correo)
                 var dni = $.trim($('#recovery-dni').val());
                 var correo = $.trim($('#recovery-email').val());
-
                 if (!dni || !correo) {
                     mostrarAlertaRecovery('error', 'Ingrese su DNI y correo electrónico.');
                     return;
                 }
-
                 $btnText.hide();
                 $btnLoading.text('Verificando...').show();
                 $btn.prop('disabled', true);
-
                 $.ajax({
                     url: BASE_URL + 'auth/recuperarPassword',
                     type: 'POST',
@@ -262,7 +208,6 @@ if (typeof jQuery !== 'undefined') {
                         $btnText.show();
                         $btnLoading.hide();
                         $btn.prop('disabled', false);
-
                         if (response.success && response.step === 'identity_ok') {
                             recoveryUsername = response.data.username;
                             $('#recovery-username-display').text('Usuario: ' + response.data.username);

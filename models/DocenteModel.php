@@ -1,12 +1,6 @@
 <?php
 
-/**
- * =====================================================================
- * MODELO: DocenteModel.php
- * Acceso a datos de la entidad DOCENTES conectada a PERSONAS, EXTRA_PERSONA,
- * CREDENCIALES y USUARIO_ROL en MySQL (Nombres de tabla en MAYÚSCULAS).
- * =====================================================================
- */
+// Modelo de acceso a datos de DOCENTES, PERSONAS, CREDENCIALES y USUARIO_ROL
 
 class DocenteModel
 {
@@ -89,9 +83,7 @@ class DocenteModel
         }
     }
 
-    /**
-     * Obtiene la lista completa de docentes con su información personal y asignación de cursos.
-     */
+    // Obtiene lista completa de docentes con información personal y cursos
     public function getAll(): array
     {
         $sql = "SELECT 
@@ -153,9 +145,7 @@ class DocenteModel
         return $credentials;
     }
 
-    /**
-     * Crea un nuevo docente registrando la persona, extras, buzón, docente, credenciales y rol.
-     */
+    // Crea un nuevo docente con persona, buzón, credenciales y rol
     public function create(array $data): array
     {
         $dni       = trim((string)($data['dni'] ?? ''));
@@ -272,9 +262,7 @@ class DocenteModel
         }
     }
 
-    /**
-     * Cambia el estado activo/inactivo de un docente.
-     */
+    // Cambia estado activo/inactivo de un docente
     public function updateStatus(int $idDocente, bool $esActivo): array
     {
         $stmt = $this->pdo->prepare("UPDATE DOCENTES SET es_activo = ? WHERE id_docente = ?");
@@ -286,9 +274,7 @@ class DocenteModel
         ];
     }
 
-    /**
-     * Califica el desempeño de un docente.
-     */
+    // Califica el desempeño de un docente
     public function rateDocente(int $idDocente, float $calificacion, string $observaciones): array
     {
         $stmt = $this->pdo->prepare("UPDATE DOCENTES SET calificacion = ?, observaciones = ? WHERE id_docente = ?");

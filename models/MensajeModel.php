@@ -1,9 +1,6 @@
 <?php
 
-/**
- * Modelo de mensajería interna usando las tablas existentes BUZON y MENSAJE.
- * El campo id_buzon identifica el buzón del destinatario.
- */
+// Modelo de mensajería interna usando BUZON y MENSAJE
 class MensajeModel
 {
     private PDO $conn;

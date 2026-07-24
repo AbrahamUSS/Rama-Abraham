@@ -1,15 +1,5 @@
 <?php
-/**
- * =====================================================================
- * COMPONENTE: navbar.php
- * Barra de navegación superior con información del usuario logueado,
- * campana de notificaciones, menú responsive y botón de cerrar sesión.
- * =====================================================================
- * 
- * Parámetros opcionales:
- * - $userRoleLabel (string): Nombre visible del rol (ej: "Director", "Docente")
- * - $badgeCount (int): Número de notificaciones sin leer
- */
+// Componente navbar: barra superior con perfil y notificaciones
 $usuarioNombre = $_SESSION['usuario_nombre'] ?? 'Usuario';
 $usuarioRol = $userRoleLabel ?? ($_SESSION['rol_nombre'] ?? 'Usuario');
 $notifBadge = $badgeCount ?? 3;

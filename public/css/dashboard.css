@@ -1,4 +1,4 @@
-/* General Dashboard Components & Card Layouts */
+/* Tarjetas */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -50,7 +50,7 @@
   fill: none;
 }
 
-/* Forms & UI Inputs */
+/* Formularios */
 .form-layout {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -92,7 +92,7 @@
   min-height: 100px;
 }
 
-/* Selector Panel (e.g. Curso Selector) */
+/* Selector */
 .selector-panel {
   background-color: var(--white);
   padding: 16px;
@@ -112,7 +112,7 @@
   white-space: nowrap;
 }
 
-/* School Tables */
+/* Tablas */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
@@ -155,7 +155,7 @@
   background-color: var(--neutral-bg-hover);
 }
 
-/* Inline Grade Input inside table */
+/* Input calificación */
 .grade-input {
   width: 54px;
   padding: 6px;
@@ -182,7 +182,7 @@
   color: var(--success);
 }
 
-/* Tabs Navigation */
+/* Pestañas */
 .tabs-container {
   display: flex;
   gap: 8px;
@@ -209,7 +209,7 @@
   border-bottom-color: var(--primary-orange);
 }
 
-/* Action Buttons */
+/* Botones */
 .btn-container {
   display: flex;
   gap: 12px;
@@ -301,7 +301,7 @@
   color: var(--primary-orange);
 }
 
-/* Download item row styling */
+/* Descargas */
 .download-item {
   display: flex;
   align-items: center;

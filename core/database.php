@@ -1,10 +1,6 @@
 <?php
 
-/**
- * Clase de Conexión a la Base de Datos
- * Implementa el patrón Singleton. Soporta variables de entorno (Docker) 
- * con fallback automático a la configuración local (XAMPP).
- */
+// Conexión Singleton a BD, con soporte Docker y fallback local
 class Conexion
 {
     private static $instance = null;

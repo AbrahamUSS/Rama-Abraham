@@ -1,14 +1,5 @@
 <?php
-/**
- * =====================================================================
- * MODELO: ReporteModel.php
- * Procesa consultas consolidadas de notas y asistencias directamente de la BD MySQL.
- *
- * Cuando se recibe un $idDocente (rol docente), las consultas se limitan
- * a los alumnos de los grados/cursos asignados al docente vía ASIGNACION_CURSO.
- * Cuando $idDocente es null (rol director/admin), se muestran todos los registros.
- * =====================================================================
- */
+// Modelo de reportes consolidados de notas y asistencias
 
 class ReporteModel
 {
@@ -19,10 +10,7 @@ class ReporteModel
         $this->pdo = $pdo;
     }
 
-    /**
-     * Obtiene los ids de grado donde el docente tiene cursos asignados.
-     * Útil para filtrar alumnos y opciones de filtro.
-     */
+    // IDs de grado asignados al docente
     private function getGradosDelDocente(int $idDocente): array
     {
         $stmt = $this->pdo->prepare("
@@ -35,10 +23,7 @@ class ReporteModel
         return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'id_grado');
     }
 
-    /**
-     * Obtiene los ids de gradoCurso asignados al docente.
-     * Útil para filtrar cursos y notas.
-     */
+    // IDs de gradoCurso asignados al docente
     private function getGradoCursosDelDocente(int $idDocente): array
     {
         $stmt = $this->pdo->prepare("
@@ -50,10 +35,7 @@ class ReporteModel
         return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'id_gradoCurso');
     }
 
-    /**
-     * Obtiene los niveles y grados disponibles en la BD para popular filtros dinámicos.
-     * Si $idDocente no es null, solo devuelve los grados donde el docente enseña.
-     */
+    // Niveles y grados disponibles para filtros dinámicos
     public function getFiltrosOpciones(?int $idDocente = null): array
     {
         if ($idDocente !== null) {
@@ -107,10 +89,7 @@ class ReporteModel
         ];
     }
 
-    /**
-     * Obtiene el reporte completo de notas por alumno y por asignatura desde la BD.
-     * Si $idDocente no es null, solo muestra cursos y alumnos vinculados al docente.
-     */
+    // Reporte completo de notas por alumno y asignatura
     public function getReporteNotas(array $filtros = [], ?int $idDocente = null): array
     {
         // 1. Cursos disponibles (filtrados por docente si aplica)
@@ -366,10 +345,7 @@ class ReporteModel
         ];
     }
 
-    /**
-     * Obtiene reporte consolidado de Notas + Asistencias para la pestaña de "Alumnos con Filtros".
-     * Si $idDocente no es null, solo incluye alumnos de los grados del docente.
-     */
+    // Reporte consolidado de notas y asistencias
     public function getReporteConsolidado(array $filtros = [], ?int $idDocente = null): array
     {
         $notasData = $this->getReporteNotas($filtros, $idDocente);

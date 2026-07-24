@@ -1,10 +1,5 @@
 <?php
-/**
- * =====================================================================
- * COMPONENTE: modal.php
- * Estructura de ventana modal genérica reutilizable en todo el sistema.
- * =====================================================================
- */
+// Componente modal: ventana flotante genérica reutilizable
 ?>
 <div class="modal-overlay" id="app-modal" style="display: none;">
   <div class="modal-card">

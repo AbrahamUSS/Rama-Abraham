@@ -1,6 +1,6 @@
-/* Components: Calendar, Messaging, and Economic Charts */
+/* Componentes */
 
-/* 1. Monthly Calendar Grid */
+/* Calendario */
 .calendar-wrapper {
   background-color: var(--white);
   border-radius: var(--radius-lg);
@@ -121,7 +121,7 @@
   border-left: 3px solid var(--success);
 }
 
-/* 2. Chat / Messaging Interface */
+/* Chat */
 .chat-container {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -301,7 +301,7 @@
   border-color: var(--primary-orange);
 }
 
-/* 3. Economic Charts and Dashboard representation */
+/* Gráficos */
 .financial-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -461,7 +461,7 @@
   white-space: nowrap;
 }
 
-/* Economic Manual Adjustments */
+/* Ajustes */
 .adjustments-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

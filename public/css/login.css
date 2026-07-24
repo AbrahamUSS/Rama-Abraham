@@ -2,7 +2,7 @@
     box-sizing: border-box;
 }
 
-/* Login Container Style */
+/* Contenedor login */
 .login-container {
   min-height: 100vh;
   display: flex;
@@ -14,7 +14,7 @@
   overflow: hidden;
 }
 
-/* Background elements for depth */
+/* Fondo decorativo */
 .login-container::before {
   content: '';
   position: absolute;
@@ -41,7 +41,7 @@
   z-index: 1;
 }
 
-/* Login Card Box */
+/* Tarjeta login */
 .login-card {
   background-color: var(--white);
   border-radius: var(--radius-lg);
@@ -85,7 +85,7 @@
   margin-bottom: 32px;
 }
 
-/* Form Styles */
+/* Formulario */
 .login-form {
   text-align: left;
 }
@@ -180,7 +180,7 @@
   fill: none;
 }
 
-/* Alert Box */
+/* Alertas */
 .login-alert {
   padding: 12px 16px;
   border-radius: var(--radius-md);
@@ -231,7 +231,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Action button style */
+/* Botón acción */
 .btn-submit {
   width: 100%;
   padding: 14px;
@@ -266,7 +266,7 @@
   fill: none;
 }
 
-/* Instructions card */
+/* Credenciales */
 .credentials-hint {
   margin-top: 24px;
   font-size: 12px;

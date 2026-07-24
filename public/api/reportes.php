@@ -1,9 +1,6 @@
 <?php
 session_start();
-/**
- * Endpoint API: Reportes Generales
- * URI: /public/api/reportes.php
- */
+// Endpoint API de reportes generales
 
 require_once __DIR__ . '/../../controllers/ReporteController.php';
 

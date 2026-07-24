@@ -1,10 +1,5 @@
 <?php
-/**
- * =====================================================================
- * MODELO: CursoModel.php
- * Acceso a datos de la entidad CURSO, GRADO, GRADO_CURSO y ASIGNACION_CURSO.
- * =====================================================================
- */
+// Modelo de acceso a datos de CURSO, GRADO, GRADO_CURSO y ASIGNACION_CURSO
 
 class CursoModel
 {

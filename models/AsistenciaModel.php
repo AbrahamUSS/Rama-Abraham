@@ -1,16 +1,5 @@
 <?php
-/**
- * Modelo de Asistencia
- *
- * Gestiona el registro y consulta de asistencias usando la tabla
- * `ASISTENCIA` existente en la base de datos.
- *
- * Estructura real de la tabla:
- *   id_asistencia  INT    AUTO_INCREMENT PK
- *   fecha          DATE   NOT NULL
- *   tipo           VARCHAR(2) NOT NULL  → 'P' (Presente), 'T' (Tardanza), 'F' (Falta)
- *   id_alumno      INT    NOT NULL
- */
+// Modelo de asistencia - tabla ASISTENCIA (id_asistencia, fecha, tipo, id_alumno)
 class AsistenciaModel
 {
     private $pdo;
@@ -20,17 +9,7 @@ class AsistenciaModel
         $this->pdo = $pdo;
     }
 
-    /**
-     * Registra o actualiza la asistencia de un alumno en una fecha dada.
-     * Usa INSERT ... ON DUPLICATE KEY para evitar duplicados si existe
-     * un índice UNIQUE en (id_alumno, fecha).
-     * Si no existe ese índice, hace un REPLACE o DELETE+INSERT seguro.
-     *
-     * @param int    $idAlumno
-     * @param string $fecha    Formato 'YYYY-MM-DD'
-     * @param string $tipo     'P', 'T' o 'F'
-     * @return array El registro insertado/actualizado
-     */
+    // Registra o actualiza asistencia de un alumno. Retorna array
     public function registrarUno(int $idAlumno, string $fecha, string $tipo): array
     {
         $tiposValidos = ['P', 'T', 'F'];
@@ -71,14 +50,7 @@ class AsistenciaModel
         ];
     }
 
-    /**
-     * Registra (o actualiza) la asistencia de múltiples alumnos en una sola llamada.
-     * Ideal para el botón "Confirmar Asistencia" del módulo de docente.
-     *
-     * @param string $fecha    Fecha del día en formato 'YYYY-MM-DD'
-     * @param array  $registros Array de ['id_alumno' => int, 'tipo' => 'P'|'T'|'F']
-     * @return array Resumen con cantidad de registros guardados y errores
-     */
+    // Registra asistencia de múltiples alumnos en lote. Retorna resumen
     public function registrarLote(string $fecha, array $registros): array
     {
         $guardados = 0;
@@ -103,13 +75,7 @@ class AsistenciaModel
         ];
     }
 
-    /**
-     * Obtiene todos los registros de asistencia de una fecha dada.
-     * Hace JOIN con la tabla `alumnos` para traer el nombre y código.
-     *
-     * @param string $fecha
-     * @return array
-     */
+    // Obtiene registros de asistencia por fecha con datos del alumno
     public function getPorFecha(string $fecha): array
     {
         $stmt = $this->pdo->prepare(
@@ -128,12 +94,7 @@ class AsistenciaModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Obtiene el historial completo de asistencias de un alumno específico.
-     *
-     * @param int $idAlumno
-     * @return array
-     */
+    // Obtiene historial de asistencias de un alumno
     public function getPorAlumno(int $idAlumno): array
     {
         $stmt = $this->pdo->prepare(
@@ -146,16 +107,7 @@ class AsistenciaModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Devuelve TODOS los alumnos activos con su tipo de asistencia para una fecha.
-     * Si el alumno no tiene registro ese día, se pre-asigna 'P' por defecto.
-     * Filtrable por nivel educativo o id_grado.
-     *
-     * @param string $fecha   Formato 'YYYY-MM-DD'
-     * @param string $nivel   'Primaria', 'Inicial', etc. (vacío = todos)
-     * @param int    $idGrado ID del grado escolar (0 = no filtrar por grado)
-     * @return array
-     */
+    // Devuelve todos los alumnos activos con su asistencia para una fecha
     public function getEstudiantesParaFecha(string $fecha, string $nivel = '', int $idGrado = 0): array
     {
         $where  = ['1=1'];
@@ -189,14 +141,7 @@ class AsistenciaModel
     }
 
 
-    /**
-     * Devuelve un resumen de asistencias (P, T, F) agrupado por alumno.
-     * Útil para el módulo de Reportes de Asistencias.
-     *
-     * @param array $filtros     Soporta: 'fecha_inicio', 'fecha_fin', 'id_alumno'
-     * @param int|null $idDocente  Si no es null, filtra solo alumnos de grados del docente
-     * @return array
-     */
+    // Resumen de asistencias (P, T, F) agrupado por alumno
     public function getResumenPorAlumno(array $filtros = [], ?int $idDocente = null): array
     {
         $where  = ['1=1'];

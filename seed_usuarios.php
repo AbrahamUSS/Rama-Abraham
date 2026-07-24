@@ -1,18 +1,5 @@
 <?php
-/**
- * =============================================================
- * SEED DE USUARIOS INICIALES - Sistema Gestión IE
- * =============================================================
- * 
- * Este script crea dos usuarios de prueba:
- *   1. Director  -> username: director  | password: director123
- *   2. Docente   -> username: docente   | password: docente123
- *
- * Ejecutar UNA SOLA VEZ después de importar corazonJesus.sql
- * Desde CLI:  php seed_usuarios.php
- * Desde web:  http://localhost:8080/Sistema_Gestion_IE/seed_usuarios.php
- * =============================================================
- */
+// Seed de usuarios iniciales: director y docente de prueba
 
 require_once __DIR__ . '/core/database.php';
 require_once __DIR__ . '/core/security.php';
@@ -21,9 +8,7 @@ try {
     $conn = Conexion::connection();
     $conn->beginTransaction();
 
-    // =========================================================
-    // CREDENCIALES DE LOS USUARIOS
-    // =========================================================
+    // credenciales de usuarios
     $usuarios = [
         [
             'rol'            => 'Director',
@@ -63,7 +48,7 @@ try {
 
     foreach ($usuarios as $u) {
 
-        // 1. Insertar en PERSONAS
+        // 1. personas
         $stmt = $conn->prepare("
             INSERT INTO PERSONAS (dni, nombre, ap_paterno, ap_materno, fechaNa, direccion)
             VALUES (:dni, :nombre, :ap_paterno, :ap_materno, :fechaNa, :direccion)
@@ -78,7 +63,7 @@ try {
         ]);
         $idPersona = $conn->lastInsertId();
 
-        // 2. Insertar en EXTRA_PERSONA
+        // 2. extra persona
         $stmt = $conn->prepare("
             INSERT INTO EXTRA_PERSONA (id_persona, telefono, correo)
             VALUES (:id_persona, :telefono, :correo)
@@ -89,12 +74,12 @@ try {
             ':correo'     => $u['correo'],
         ]);
 
-        // 3. Crear BUZON para el usuario
+        // 3. buzon
         $stmt = $conn->prepare("INSERT INTO BUZON (no_leidos) VALUES (0)");
         $stmt->execute();
         $idBuzon = $conn->lastInsertId();
 
-        // 4. Insertar en tabla de rol específico (ADMINISTRATIVO o DOCENTES)
+        // 4. rol especifico
         if ($u['tipo'] === 'administrativo') {
             $stmt = $conn->prepare("
                 INSERT INTO ADMINISTRATIVO (id_persona, es_activo, grado_academico, especialidad, id_buzon)
@@ -121,7 +106,7 @@ try {
             ]);
         }
 
-        // 5. Insertar en CREDENCIALES (password hasheado con bcrypt)
+        // 5. credenciales
         $passwordHash = Security::encriptarPassword($u['password']);
         $stmt = $conn->prepare("
             INSERT INTO CREDENCIALES (username, password_hash, id_persona)
@@ -134,7 +119,7 @@ try {
         ]);
         $idCredenciales = $conn->lastInsertId();
 
-        // 6. Obtener el id_rol correspondiente
+        // 6. obtener rol
         $stmt = $conn->prepare("SELECT id_rol FROM ROL WHERE nombre = :nombre");
         $stmt->execute([':nombre' => $u['rol']]);
         $rol = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -143,7 +128,7 @@ try {
             throw new Exception("Rol '{$u['rol']}' no encontrado. Asegurese de haber ejecutado corazonJesus.sql primero.");
         }
 
-        // 7. Asignar rol en USUARIO_ROL
+        // 7. asignar rol
         $stmt = $conn->prepare("
             INSERT INTO USUARIO_ROL (id_credenciales, id_rol)
             VALUES (:id_credenciales, :id_rol)

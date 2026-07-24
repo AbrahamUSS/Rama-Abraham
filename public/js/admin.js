@@ -1,20 +1,7 @@
-/**
- * Módulo de Administración (AdminModule)
- * 
- * Este archivo actúa como el Controlador de la interfaz del personal administrativo (Director).
- * Funciona bajo una arquitectura de Single Page Application (SPA), donde en lugar de recargar
- * la página completa, se definen funciones JavaScript que renderizan dinámicamente el HTML
- * dentro del elemento contenedor principal (#main-content).
- * 
- * Características clave:
- * 1. Comunicación Local con SchoolDB: Consume y persiste información del estado del colegio.
- * 2. Renderizado Reactivo del DOM: Modifica el DOM mediante plantillas de texto dinámicas (Template Literals).
- * 3. Escuchadores de Eventos: Asigna manejadores a formularios, botones de cambio de estado y modales.
- * 4. Integración de Componentes: Renderiza indicadores clave de rendimiento (KPIs), tablas interactivas y gráficos CSS.
- */
+// Módulo de administración - Renderizado SPA de vistas del director
 (function() {
 
-  // Función auxiliar para actualizar el título de la página en la barra de navegación superior
+  // Actualizar título en navbar
   function setPageTitle(title) {
     const el = document.getElementById('navbar-page-title');
     if (el) el.textContent = title;
@@ -80,9 +67,7 @@
       .replaceAll("'", '&#039;');
   }
 
-  /* ==========================================================================
-     1. INFORMACIÓN PERSONAL
-     ========================================================================== */
+  // --- Información Personal ---
   function renderInfoPersonal(container) {
     setPageTitle('Información Personal');
     const session = window.SchoolAuth.getSession() || { name: 'Lic. Jose Perez', roleLabel: 'Director Administrativo' };
@@ -136,9 +121,7 @@
     }
   }
 
-  /* ==========================================================================
-     2. INCIDENCIAS: GESTIÓN ADMINISTRATIVA CON PERSISTENCIA MYSQL
-     ========================================================================== */
+  // --- Incidencias ---
   function renderIncidencias(container) {
     setPageTitle('Gestión Global de Incidencias');
 
@@ -362,9 +345,7 @@
     });
   }
 
-  /* ==========================================================================
-     3. DOCENTES: REPORTE & ACCIÓN PARA CALIFICAR
-     ========================================================================== */
+  // --- Docentes ---
   function renderDocentes(container) {
     setPageTitle('Gestión de Docentes');
 
@@ -545,9 +526,7 @@
     loadDocentesReport();
   }
 
-  /* ==========================================================================
-     4. AÑADIR DOCENTES: FORMULARIO Y REGISTRO EN BD
-     ========================================================================== */
+  // --- Añadir docentes ---
   function renderAddDocentes(container) {
     setPageTitle('Añadir Docentes');
 
@@ -835,9 +814,7 @@
     renderRegisteredTeachers();
   }
 
-  /* ==========================================================================
-     5. GESTIÓN DE CURSOS: CREAR CURSO Y ASIGNAR DOCENTE
-     ========================================================================== */
+  // --- Cursos ---
   function renderCursos(container) {
     setPageTitle('Gestión de Cursos');
 
@@ -1142,9 +1119,7 @@
     loadData();
   }
 
-  /* ==========================================================================
-     6. MENSAJERÍA / NOTIFICACIONES (ADMINISTRACIÓN)
-     ========================================================================== */
+  // --- Mensajería ---
   function renderMensajeria(container) {
     setPageTitle('Mensajería y Comunicados');
 
@@ -1408,9 +1383,7 @@
     showDocentes();
   }
 
-  /* ==========================================================================
-     5. PLANTILLAS OFICIALES ALMACENADAS EN MYSQL
-     ========================================================================== */
+  // --- Plantillas ---
   function renderPlantillas(container) {
     setPageTitle('Gestor de Plantillas UGEL');
 
@@ -1690,16 +1663,12 @@
     });
   }
 
-  /* ==========================================================================
-     6. GESTIÓN ECONÓMICA: DASHBOARD VISUAL REACTIVO CON AJUSTES
-     ========================================================================== */
+  // --- Economía ---
   function getEconomiaApiUrl() {
     return (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + 'public/api/economia.php';
   }
 
-  /* ==========================================================================
-     8. GESTIÓN ECONÓMICA Y SIMULADOR FINANCIERO
-     ========================================================================== */
+
   function renderEconomia(container) {
     setPageTitle('Gestión Económica Escolar');
 
@@ -1954,7 +1923,7 @@
       const impuestos = parseInt(document.getElementById('slide-impuestos').value) || 0;
       const reservaPct = parseInt(document.getElementById('slide-reserva-pct').value) || 0;
 
-      // Labels update
+      // Actualizar labels
       document.getElementById('slide-pension-lbl').textContent = `S/ ${pension.toLocaleString()}`;
       document.getElementById('slide-alumnos-lbl').textContent = `${alumnos} alumnos`;
       document.getElementById('slide-moro-lbl').textContent = `${morosidadPct}%`;
@@ -1966,7 +1935,7 @@
       document.getElementById('slide-impuestos-lbl').textContent = `S/ ${impuestos.toLocaleString()}`;
       document.getElementById('slide-reserva-pct-lbl').textContent = `${reservaPct}%`;
 
-      // Financial Engine Formulas
+      // Fórmulas financieras
       const recaudacionTeorica = pension * alumnos;
       const montoMorosidad = Math.round(recaudacionTeorica * (morosidadPct / 100));
       const recaudacionEfectiva = recaudacionTeorica - montoMorosidad;
@@ -1980,7 +1949,7 @@
       const margenPct = recaudacionEfectiva > 0 ? ((netBalance / recaudacionEfectiva) * 100).toFixed(1) : '0.0';
       const breakEvenAlumnos = pension > 0 ? Math.ceil(totalEgresos / pension) : 0;
 
-      // Draw Values in KPI Cards
+      // Dibujar KPIs
       document.getElementById('val-recaudacion-teorica').textContent = `S/ ${recaudacionTeorica.toLocaleString()}`;
       document.getElementById('val-recaudacion-efectiva').textContent = `S/ ${recaudacionEfectiva.toLocaleString()}`;
       document.getElementById('val-morosidad-monto').textContent = `S/ ${montoMorosidad.toLocaleString()} (${morosidadPct}%)`;
@@ -1994,7 +1963,7 @@
 
       document.getElementById('val-break-even').textContent = `${breakEvenAlumnos} alumnos min.`;
 
-      // Health Banner
+      // Banner de salud
       const healthBanner = document.getElementById('eco-health-banner');
       const healthSpan = healthBanner.querySelector('span');
       if (netBalance >= 0 && parseFloat(margenPct) >= 15) {
@@ -2014,12 +1983,12 @@
         healthSpan.innerHTML = `🚨 <strong>Alerta Financiera (Déficit Operativo)</strong> — Pérdida mensual estimada de S/ ${Math.abs(netBalance).toLocaleString()}`;
       }
 
-      // Chart Badge
+      // Badge margen
       const margenBadge = document.getElementById('chart-margen-badge');
       margenBadge.textContent = `Margen Neto: ${margenPct}%`;
       margenBadge.style.color = netBalance >= 0 ? '#10b981' : '#ef4444';
 
-      // Bar Chart Scaling
+      // Escala barras
       const maxVal = Math.max(recaudacionTeorica, recaudacionEfectiva, totalEgresos, Math.abs(netBalance), 10000);
       const fillTeorica = document.getElementById('bar-fill-teorica');
       const fillEfectiva = document.getElementById('bar-fill-efectiva');
@@ -2039,7 +2008,7 @@
       fillBalance.querySelector('.chart-bar-tooltip').textContent = `S/ ${netBalance.toLocaleString()}`;
       fillBalance.style.backgroundColor = netBalance >= 0 ? '#10b981' : '#ef4444';
 
-      // Expenses Breakdown Bar
+      // Barra de gastos
       const totalBudget = totalEgresos > 0 ? totalEgresos : 1;
       const pctNomina = ((planillaDocente / totalBudget) * 100).toFixed(1);
       const pctOpex = ((opex / totalBudget) * 100).toFixed(1);
@@ -2135,7 +2104,7 @@
         });
     }
 
-    // Bind slider input events for real-time calculations
+    // Eventos de sliders
     const slides = container.querySelectorAll('.economy-slide');
     slides.forEach(slide => {
       slide.addEventListener('input', calculateEconomicsAndDraw);
@@ -2143,14 +2112,14 @@
 
     saveBtn.addEventListener('click', saveEconomicsData);
 
-    // Initial loading from database
+    // Cargar datos iniciales
     loadEconomicsData();
   }
 
   updateNotificationBadge();
   window.setInterval(updateNotificationBadge, 30000);
 
-  // Expose methods globally for Router config in admin.html
+  // Exponer métodos para el router
   window.AdminModule = {
     renderInfoPersonal: renderInfoPersonal,
     renderIncidencias: renderIncidencias,

@@ -1,20 +1,7 @@
-/**
- * Módulo de Docente (DocenteModule)
- * 
- * Este archivo actúa como el Controlador principal para la vista del Docente.
- * Organiza e inyecta dinámicamente las interfaces necesarias para que el docente pueda:
- * 1. Gestionar su información personal e interactuar en el chat directo con Dirección.
- * 2. Visualizar y evaluar a los alumnos de sus cursos (Matemática, Ciencia, etc.), guardando notas.
- * 3. Revisar su calendario, registrar la asistencia diaria (Presente, Tarde, Falta).
- * 4. Redactar reportes de incidencias disciplinarias de los estudiantes.
- * 5. Consultar estadísticas de rendimiento general, aprobados, desaprobados y promedios.
- * 
- * Se basa en una arquitectura SPA (Single Page Application) manipulando el DOM
- * mediante Template Literals e interactuando directamente con el motor de persistencia SchoolDB.
- */
+// Módulo del docente - Renderizado SPA de vistas del profesor
 (function() {
 
-  // Función auxiliar para actualizar el título de la página en la barra superior
+  // Actualizar título en navbar
   function setPageTitle(title) {
     const el = document.getElementById('navbar-page-title');
     if (el) el.textContent = title;
@@ -76,9 +63,7 @@
       : '';
   }
 
-  /* ==========================================================================
-     1. INFORMACIÓN PERSONAL & MENSAJERÍA CON DIRECCIÓN
-     ========================================================================== */
+  // --- Info personal y mensajería ---
   function renderInfoPersonal(container) {
     setPageTitle('Información Personal y Mensajería');
 
@@ -142,7 +127,7 @@
       <div id="password-change-section"></div>
     `;
 
-    // Handle profile update submit
+    // Guardar perfil
     const profileForm = document.getElementById('docent-info-form');
     profileForm.addEventListener('submit', function(e) {
       e.preventDefault();
@@ -267,9 +252,7 @@
     });
   }
 
-  /* ==========================================================================
-     2. CURSOS: ELEGIR CURSO, MATERIAL DE CLASE & REGISTRAR NOTAS
-     ========================================================================== */
+  // --- Cursos y notas ---
   function renderCursos(container) {
     setPageTitle('Gestión de Cursos');
 
@@ -371,14 +354,13 @@
           </div>
         `;
       } else {
-        // Grades Entry View
-        // Map courseId to db subject key (MAT5P -> matematica, COM5P -> comunicacion, etc)
+        // Vista de notas
         let subjectKey = 'matematica';
         if (activeCourseId === 'MAT5P' || activeCourseId === 'INI5A') subjectKey = 'matematica';
         if (activeCourseId === 'COM5P') subjectKey = 'comunicacion';
         if (activeCourseId === 'CIEN5P') subjectKey = 'ciencia';
 
-        // Filter students according to course level (Primaria or Inicial)
+        // Filtrar por nivel
         const relevantStudents = db.students;
         
         let tableRows = '';
@@ -432,14 +414,14 @@
           </div>
         `;
 
-        // Handle auto color adjustments and auto-save indicators
+        // Colorear notas según valor
         const gradeInputs = tabContainer.querySelectorAll('.grade-input');
         gradeInputs.forEach(input => {
           input.addEventListener('input', function() {
             const val = parseInt(this.value);
             const statusCell = this.closest('tr').querySelector('.row-status');
             
-            // Adjust colors based on grade value
+            // Ajustar color
             if (!isNaN(val)) {
               if (val < 11) {
                 this.className = 'grade-input fail';
@@ -454,7 +436,7 @@
           });
         });
 
-        // Save actions
+        // Botones de guardar
         const saveBtn = document.getElementById('btn-save-grades-manually');
         const revertBtn = document.getElementById('btn-revert-grades');
         const indicator = document.getElementById('grades-save-indicator');
@@ -481,9 +463,7 @@
     }
   }
 
-  /* ==========================================================================
-     3. ACTIVIDADES, CALENDARIO INSTITUCIONAL Y HORARIO DOCENTE
-     ========================================================================== */
+  // --- Actividades y calendario ---
   function loadAssignedTeacherCourses() {
     const coursePicker = document.getElementById('course-picker');
     const message = document.getElementById('assigned-courses-message');
@@ -880,14 +860,12 @@
     });
   }
 
-  /* ==========================================================================
-     4. REGISTRAR ASISTENCIA: SECTOR DE CURSO, ASISTENCIA GENERAL & FILTROS
-     ========================================================================== */
+  // --- Asistencia ---
   function renderAsistencia(container) {
     setPageTitle('Registrar Asistencia');
 
     let selectedDate = new Date().toISOString().split('T')[0];
-    // Mapa de asignaciones cargadas desde la BD: key = "id_curso-id_grado"
+    // Mapa de asignaciones: key = "id_curso-id_grado"
     let asignacionesMap = {};
 
     container.innerHTML = `
@@ -958,7 +936,7 @@
     const markAllPresentBtn = document.getElementById('btn-mark-all-present');
     const saveBtn = document.getElementById('btn-save-asist');
 
-    // ── Cargar cursos asignados al docente logueado desde la API ──────────
+    // Cargar cursos del docente desde API
     const misCursosUrl = new URL(getApiUrl('public/api/cursos.php'));
     misCursosUrl.searchParams.set('action', 'get-mis-cursos');
     fetch(misCursosUrl.toString(), {
@@ -1144,7 +1122,7 @@
         });
     }
 
-    // Confirmar Asistencia → persiste en la BD vía API
+    // Guardar asistencia
     saveBtn.addEventListener('click', function() {
       const rows = document.querySelectorAll('#asistencia-tbody tr');
       const registros = [];
@@ -1192,9 +1170,7 @@
 
   }
 
-  /* ==========================================================================
-     5. INCIDENCIAS: REDACCIÓN DOCENTE CON PERSISTENCIA MYSQL
-     ========================================================================== */
+  // --- Incidencias ---
   function renderIncidencias(container) {
     setPageTitle('Registro de Incidencias');
 
@@ -1386,9 +1362,7 @@
     });
   }
 
-  /* ==========================================================================
-     6. REPORTES: NOTAS, ASISTENCIAS & ALUMNOS CON FILTROS
-     ========================================================================== */
+  // --- Reportes ---
   function renderReportes(container) {
     setPageTitle('Reportes Generales');
 
@@ -1412,7 +1386,7 @@
     btnAttendance.addEventListener('click', function() { switchTab('attendance'); });
     btnFilters.addEventListener('click', function() { switchTab('filters'); });
 
-    // Helper para cargar niveles y grados dinámicos de la BD
+    // Cargar filtros dinámicos
     function loadFilterOptions(levelSelect, gradeSelect, callback) {
       fetch(getApiUrl('public/api/reportes.php?tipo=filtros'), {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -1574,7 +1548,7 @@
               const metricas   = data.metricas || {};
               const promediosA = data.promedios_asignatura || [];
 
-              // Render Metric Cards
+              // Tarjetas de métricas
               const metricsRow = document.getElementById('grades-metrics-row');
               metricsRow.innerHTML = `
                 <div class="metric-card">
@@ -1606,7 +1580,7 @@
                 </div>
               `;
 
-              // Render Bar Chart
+              // Gráfico de barras
               const chartBody = document.getElementById('grades-chart-body');
               let chartHtml = `
                 <div class="chart-axis-lines">
@@ -1634,7 +1608,7 @@
 
               chartBody.innerHTML = chartHtml;
 
-              // Render Table Header & Rows
+              // Cabecera y filas de tabla
               const thead = document.getElementById('grades-thead');
               let headHtml = `
                 <tr>
@@ -2105,7 +2079,7 @@
   updateNotificationBadge();
   window.setInterval(updateNotificationBadge, 30000);
 
-  // Expose methods globally for Router config in docente.html
+  // Exponer métodos para el router
   window.DocenteModule = {
     renderInfoPersonal: renderInfoPersonal,
     renderCursos: renderCursos,

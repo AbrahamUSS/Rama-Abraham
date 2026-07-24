@@ -1,10 +1,6 @@
 <?php
 
-/**
- * Modelo de incidencias disciplinarias.
- * Trabaja exclusivamente con las tablas existentes:
- * INCIDENCIA, ALUMNOS_INCIDENCIA, ALUMNOS, DOCENTES, PERSONAS y GRADO.
- */
+// Modelo de incidencias disciplinarias
 class IncidenciaModel
 {
     private PDO $conn;

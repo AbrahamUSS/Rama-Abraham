@@ -1,13 +1,5 @@
 <?php
-/**
- * =====================================================================
- * COMPONENTE: scripts.php
- * Carga de scripts JavaScript base, enrutador SPA y configuración DOM.
- * =====================================================================
- * 
- * Parámetros esperados:
- * - $moduleScript (string): Nombre del script del módulo ('admin.js' o 'docente.js')
- */
+// Componente scripts: carga JS base, router SPA y config DOM
 $scriptNombre = $moduleScript ?? 'admin.js';
 ?>
 <!-- 1. mockData.js provee el motor CRUD de datos simulados en localStorage -->

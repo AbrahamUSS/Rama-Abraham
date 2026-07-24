@@ -1,13 +1,5 @@
 <?php
-/**
- * Endpoint de API: Asistencias
- * URI: /api/asistencia.php
- *
- * GET ?fecha=YYYY-MM-DD          → asistencias de esa fecha
- * GET ?id_alumno=X               → historial de un alumno
- * POST { fecha, registros:[...] } → registro en lote
- * POST { fecha, id_alumno, tipo } → registro individual
- */
+// Endpoint API de asistencias: consulta y registro
 require_once __DIR__ . '/../../controllers/AsistenciaController.php';
 
 header('Content-Type: application/json');

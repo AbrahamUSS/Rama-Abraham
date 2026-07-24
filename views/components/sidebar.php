@@ -1,13 +1,5 @@
 <?php
-/**
- * =====================================================================
- * COMPONENTE: sidebar.php
- * Menú de navegación lateral adaptable según el rol del usuario.
- * =====================================================================
- * 
- * Parámetros opcionales:
- * - $activeRole (string): 'admin' o 'docente' (por defecto se deduce de $_SESSION)
- */
+// Componente sidebar: menú lateral adaptable según rol
 $rolActual = strtolower(trim($_SESSION['rol_nombre'] ?? ''));
 $esAdmin = ($activeRole ?? ($rolActual === 'docente' ? 'docente' : 'admin')) !== 'docente';
 $usuarioNombre = $_SESSION['usuario_nombre'] ?? 'Usuario';

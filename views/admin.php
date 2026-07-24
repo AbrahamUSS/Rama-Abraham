@@ -7,33 +7,33 @@ require_once "views/components/head.php";
 <body>
 
   <div id="app-layout">
-    <!-- Capa de fondo oscura para móviles -->
+    <!-- overlay móviles -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-    <!-- Menú de Navegación Lateral (Sidebar) -->
+    <!-- sidebar -->
     <?php 
     $activeRole = 'admin';
     require_once "views/components/sidebar.php"; 
     ?>
 
-    <!-- Contenedor Principal de la Página -->
+    <!-- contenido principal -->
     <div class="main-wrapper">
-      <!-- Barra de Navegación Superior (Navbar) -->
+      <!-- navbar -->
       <?php 
       $userRoleLabel = "Director";
       $badgeCount = 0;
       require_once "views/components/navbar.php"; 
       ?>
 
-      <!-- Espacio dinámico donde el Router JS inyectará las vistas de forma asíncrona -->
+      <!-- Router JS -->
       <main class="main-content" id="main-content"></main>
     </div>
   </div>
 
-  <!-- Ventana Modal Genérica Reutilizable -->
+  <!-- modal -->
   <?php require_once "views/components/modal.php"; ?>
 
-  <!-- Carga de Módulos Javascript e Inicialización -->
+  <!-- scripts -->
   <?php 
   $moduleScript = "admin.js";
   require_once "views/components/scripts.php"; 

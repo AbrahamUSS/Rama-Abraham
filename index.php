@@ -1,27 +1,20 @@
 <?php
 
-/**
- * =====================================================================
- * FRONT CONTROLLER - PUNTO DE ENTRADA UNIFICADO
- * IEP Corazón de Jesús
- * =====================================================================
- */
+// front controller
 
 session_start();
 
-// 1. Carga de dependencias del sistema
+// dependencias
 require_once "core/config.php";
 require_once "core/database.php";
 require_once "core/security.php";
 
-// Cargar helper de rutas si existe
+// helper de rutas
 if (file_exists("core/routes.php")) {
     require_once "core/routes.php";
 }
 
-// ---------------------------------------------------------------------
-// 2. NORMALIZACIÓN DE RUTA Y SERVIDOR DE ARCHIVOS ESTÁTICOS
-// ---------------------------------------------------------------------
+// normalización de ruta y archivos estáticos
 $base_dir = dirname($_SERVER['SCRIPT_NAME']);
 $request_uri = $_SERVER['REQUEST_URI'];
 $path = parse_url($request_uri, PHP_URL_PATH);
@@ -31,12 +24,12 @@ if ($base_dir !== '/' && strpos($path, $base_dir) === 0) {
 }
 $path = trim($path, '/');
 
-// Normalizar recursos estáticos enviados con prefijo views/ o public/
+// normalizar prefijo views/public
 if (preg_match('/^(views|public)\/(css|js|docs|img)\//', $path)) {
     $path = preg_replace('/^(views|public)\//', '', $path);
 }
 
-// Servir archivos estáticos (CSS, JS, PDF, Imágenes)
+// servir archivos estáticos
 if (preg_match('/^(css|js|docs|img)\//', $path)) {
     $file = __DIR__ . '/public/' . $path;
     if (file_exists($file)) {
@@ -60,9 +53,7 @@ if (preg_match('/^(css|js|docs|img)\//', $path)) {
     }
 }
 
-// ---------------------------------------------------------------------
-// FUNCIÓN AUXILIAR DE DESPACHO DE CONTROLADORES
-// ---------------------------------------------------------------------
+// función despacho de controladores
 function despacharControlador($controllerName, $actionName, $id = null) {
     $claseControlador = ucfirst($controllerName) . "Controller";
     $archivoControlador = __DIR__ . "/controllers/" . $claseControlador . ".php";
@@ -84,9 +75,7 @@ function despacharControlador($controllerName, $actionName, $id = null) {
     return false;
 }
 
-// ---------------------------------------------------------------------
-// 3. DESPACHO MVC POR PARÁMETROS GET (?controller=...&action=...&id=...)
-// ---------------------------------------------------------------------
+// despacho MVC por GET
 if (isset($_GET["controller"])) {
     $controllerName = $_GET["controller"];
     $actionName = $_GET["action"] ?? ACCION_DEFAULT;
@@ -101,9 +90,7 @@ if (isset($_GET["controller"])) {
     }
 }
 
-// ---------------------------------------------------------------------
-// 4. MAPEO DE VISTAS DIRECTAS / RUTAS BASE
-// ---------------------------------------------------------------------
+// rutas base
 $routes = [
     ''                     => 'views/auth/login.php',
     'index.php'            => 'views/auth/login.php',
@@ -129,9 +116,7 @@ if (array_key_exists($path, $routes)) {
     }
 }
 
-// ---------------------------------------------------------------------
-// 5. DESPACHO MVC POR RUTA DE URL AMIGABLE (ej: auth/login o usuario/eliminar/5)
-// ---------------------------------------------------------------------
+// despacho MVC por URL amigable
 if (!empty($path)) {
     $segments = explode('/', $path);
     $controllerName = $segments[0];
@@ -143,14 +128,12 @@ if (!empty($path)) {
     }
 }
 
-// ---------------------------------------------------------------------
-// 6. CONTROLADOR Y ACCIÓN POR DEFECTO
-// ---------------------------------------------------------------------
+// controlador por defecto
 if (despacharControlador(CONTROLADOR_DEFAULT, ACCION_DEFAULT)) {
     exit;
 }
 
-// 7. RESPUESTA 404 SI NINGUNA REGLA COINCIDIÓ
+// 404 final
 header("HTTP/1.0 404 Not Found");
 echo "<h1>404 Not Found</h1><p>La ruta '{$path}' no existe en el sistema.</p>";
 exit;

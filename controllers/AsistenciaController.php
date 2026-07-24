@@ -1,25 +1,5 @@
 <?php
-/**
- * Controlador de Asistencia
- *
- * Maneja las peticiones HTTP para el módulo de registro de asistencias.
- * Trabaja sobre la tabla ASISTENCIA existente:
- *   (id_asistencia, fecha, tipo, id_alumno)
- *
- * Métodos HTTP soportados:
- *
- *   GET ?fecha=YYYY-MM-DD
- *     → Devuelve todos los registros de asistencia de esa fecha
- *
- *   GET ?id_alumno=X
- *     → Devuelve el historial completo de asistencias de un alumno
- *
- *   POST { fecha, registros: [{ id_alumno, tipo }] }
- *     → Registra o actualiza asistencias en lote para una fecha
- *
- *   POST { id_alumno, fecha, tipo }
- *     → Registra o actualiza la asistencia de un solo alumno
- */
+// Controlador de Asistencia: registro y consulta de asistencias
 require_once __DIR__ . '/../core/database.php';
 require_once __DIR__ . '/../models/AsistenciaModel.php';
 
@@ -33,14 +13,7 @@ class AsistenciaController
         $this->model = new AsistenciaModel($pdo);
     }
 
-    /**
-     * Despacha la petición al método del modelo correspondiente.
-     *
-     * @param string $method  Método HTTP ('GET', 'POST')
-     * @param array  $payload Cuerpo de la petición (JSON decodificado o form-data)
-     * @param array  $query   Parámetros de la URL ($_GET)
-     * @return array Respuesta estandarizada ['success', 'message', 'data']
-     */
+    // Despacha la petición al método correspondiente del modelo
     public function handleRequest(string $method, array $payload = [], array $query = []): array
     {
         // ── GET: consultas de lectura ──────────────────────────────────────────

@@ -1,9 +1,6 @@
 <?php
 
-/**
- * Modelo para actividades, calendario institucional y horario del docente.
- * Se adapta a las tablas existentes ACTIVIDADES, EVENTOS y ASIGNACION_CURSO.
- */
+// Modelo de actividades, calendario institucional y horario del docente
 class ActividadModel
 {
     private PDO $conn;

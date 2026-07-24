@@ -1,9 +1,6 @@
 <?php
 
-/**
- * Modelo de plantillas oficiales almacenadas como BLOB.
- * Usa PLANTILLAS y ASIGNACION_PLANTILLAS sin modificar su estructura.
- */
+// Modelo de plantillas oficiales almacenadas como BLOB
 class PlantillaModel
 {
     private PDO $conn;

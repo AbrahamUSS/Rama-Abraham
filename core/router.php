@@ -20,10 +20,7 @@
             ];
         }
 
-        /**
-         * Convierte una ruta amigable como '/alumnos/editar/{id}' 
-         * en un regex como '~^/alumnos/editar/(?P<id>[a-zA-Z0-9_-]+)$~'
-         */
+        // Convierte ruta con parámetros {id} a expresión regular
         private function convertirARegex(string $ruta): string {
             // Reemplaza {parametro} por un grupo de captura nombrado en Regex
             $patron = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[a-zA-Z0-9_-]+)', $ruta);

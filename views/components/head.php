@@ -1,14 +1,5 @@
 <?php
-/**
- * =====================================================================
- * COMPONENTE: head.php
- * Encabezado HTML, metadatos, hojas de estilo CSS globales e inyección
- * de variables globales de sesión para JavaScript.
- * =====================================================================
- * 
- * Parámetros esperados:
- * - $pageTitle (string): Título dinámico de la pestaña del navegador
- */
+// Componente head: metadatos, CSS globales y variables de sesión JS
 ?>
 <!DOCTYPE html>
 <html lang="es">
